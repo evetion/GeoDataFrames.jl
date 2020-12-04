@@ -1,1 +1,8 @@
 /docs/build/
+
+*.gpkg
+*.geojson
+*.shp
+*.prj
+*.shx
+*.dbf
