@@ -6,3 +6,6 @@
 *.prj
 *.shx
 *.dbf
+*.sbn
+*.sbx
+*.sha256

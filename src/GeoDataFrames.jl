@@ -11,6 +11,8 @@ using GeoFormatTypes; const GFT = GeoFormatTypes
 @reexport using ArchGDAL: intersection, union, difference, symdifference, distance
 @reexport using ArchGDAL: geomlength, geomarea, centroid
 @reexport using ArchGDAL: isempty, isvalid, issimple, isring, geomarea, centroid
+@reexport using ArchGDAL: createpoint, createlinestring, createlinearring, createpolygon, createmultilinestring, createmultipolygon
+@reexport using ArchGDAL: reproject
 
 AG.intersects(a::Vector{AG.IGeometry}, b::Vector{AG.IGeometry}) = AG.intersects.(a, b)
 AG.equals(a::Vector{AG.IGeometry}, b::Vector{AG.IGeometry}) = AG.equals.(a, b)
@@ -29,6 +31,7 @@ AG.distance(a::Vector{AG.IGeometry}, b::Vector{AG.IGeometry}) = AG.distance.(a, 
 AG.boundary(v::Vector{AG.IGeometry}) = AG.boundary.(v)
 AG.convexhull(v::Vector{AG.IGeometry}) = AG.convexhull.(v)
 AG.buffer(v::Vector{AG.IGeometry}, d) = AG.buffer.(v, d)
+AG.transform!(v::Vector{AG.IGeometry}, d) = AG.buffer.(v, d)
 AG.geomlength(v::Vector{AG.IGeometry}) = AG.geomlength.(v)
 AG.geomarea(v::Vector{AG.IGeometry}) = AG.geomarea.(v)
 AG.centroid(v::Vector{AG.IGeometry}) = AG.centroid.(v)
@@ -47,20 +50,20 @@ const fieldmapping = Dict(v => k for (k, v) in AG._FIELDTYPE)
 
 
 
+
 function read(fn::AbstractString, layer::Union{Integer,AbstractString}=0)
     ds = AG.read(fn)
     layer = AG.getlayer(ds, layer)
     table = AG.Table(layer)
     df = DataFrame(table)
-end
-
-function find_driver(extension::AbstractString)
-    AG.identifydriver(extension)
+    rename!(df, Dict(Symbol("") => "geom", ))  # needed for now
+    df
 end
 
 function write(fn::AbstractString, table, layer_name::AbstractString="data", geom_column::Symbol=Symbol("geom"), crs::GFT.GeoFormat=GFT.EPSG(4326), driver::Union{Nothing,AbstractString}=nothing)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
+
     # Geom type can't be inferred from here
     geom_type = AG.getgeomtype(rows[1][geom_column])
 
@@ -102,9 +105,10 @@ function write(fn::AbstractString, table, layer_name::AbstractString="data", geo
                     end
                 end
             end
-            AG.copy(layer, dataset=ds, name=layer_name);
+            AG.copy(layer, dataset=ds, name=layer_name)
         end
     end
+    fn
 end
 
 end  # module

@@ -1,29 +1,55 @@
 using GeoDataFrames; const GDF = GeoDataFrames
 using Test
 using DataFrames
-using ArchGDAL; const AG = ArchGDAL
+using GeoFormatTypes; const GFT = GeoFormatTypes
+using Pkg.PlatformEngines
+
+# Use ArchGDAL datasets to test with
+probe_platform_engines!()  # for download
+
+const testdatadir = @__DIR__
+
+REPO_URL = "https://github.com/yeesian/ArchGDALDatasets/blob/master/"
+
+remotefiles = [
+    ("ospy/data1/sites.dbf", "7df95edea06c46418287ae3430887f44f9116b29715783f7d1a11b2b931d6e7d"),
+    ("ospy/data1/sites.prj", "81fb1a246728609a446b25b0df9ede41c3e7b6a133ce78f10edbd2647fc38ce1"),
+    ("ospy/data1/sites.sbn", "198d9d695f3e7a0a0ac0ebfd6afbe044b78db3e685fffd241a32396e8b341ed3"),
+    ("ospy/data1/sites.sbx", "49bbe1942b899d52cf1d1b01ea10bd481ec40bdc4c94ff866aece5e81f2261f6"),
+    ("ospy/data1/sites.shp", "69af5a6184053f0b71f266dc54c944f1ec02013fb66dbb33412d8b1976d5ea2b"),
+    ("ospy/data1/sites.shx", "1f3da459ccb151958743171e41e6a01810b2a007305d55666e01d680da7bbf08"),
+]
+@info "Downloading test files..."
+for (f, sha) in remotefiles
+    localfn = joinpath(testdatadir, basename(f))
+    url = REPO_URL * f * "?raw=true"
+    PlatformEngines.download_verify(url, sha, localfn; force=true)
+end
+
 
 @testset "GeoDataFrames.jl" begin
     # Read large file
-    fn = "/Users/evetion/Downloads/ne_10m_coastline/ne_10m_coastline.shp"
+    fn = "sites.shp"
     t = GDF.read(fn)
 
     # Save table with a few random points
-    Lon = -44 .+ rand(5); Lat = -23 .+ rand(5)
-    table = DataFrame(geom=AG.createpoint.(zip(Lon, Lat)), name="test")
-    GDF.write("test_points.shp", table, "test_points")
+    coords = zip(rand(10), rand(10))
+    table = DataFrame(geom=createpoint.(coords), name="test")
+    GDF.write("test_points.shp", table)
     GDF.write("test_points.gpkg", table, "test_points")
     GDF.write("test_points.geojson", table, "test_points")
 
-
     # Save table from reading
-    GDF.write("test_read.shp", t, "test_coastline", Symbol(""))
-    GDF.write("test_read.gpkg", t, "test_coastline", Symbol(""))
-    GDF.write("test_read.geojson", t, "test_coastline", Symbol(""))
+    GDF.write("test_read.shp", t, "test_coastline")
+    GDF.write("test_read.gpkg", t, "test_coastline")
+    GDF.write("test_read.geojson", t, "test_coastline")
 
     table.geom = buffer(table.geom, 10)
     GDF.write("test_polygons.shp", table)
     GDF.write("test_polygons.gpkg", table)
     GDF.write("test_polygons.geojson", table)
+
+
+    reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
 
 end
