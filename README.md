@@ -6,9 +6,12 @@
 
 Simple geographical vector interaction built on top of [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/). Inspiration from geopandas.
 
+** this is a draft, it needs polishing **
+
 # Installation
 ```julia
-] add GeoDataFrames
+] add https://github.com/evetion/GeoDataFrames.jl.git
+] add GeoDataFrames  # once registered
 ```
 
 # Usage
@@ -89,8 +92,12 @@ plot(df.geom)
 ![image](img/plot_points.png)
 
 # TODO
-- Prepared geometry, spatial indices (LibGEOS)
-- IGeometry should be IGeometry{WKBType} for easy Schema detection (upstream)
-- Empty geom column name fix should be moved (upstream)
+- Prepared geometry, spatial indices (LibGEOS) (probably can't be done as GDAL OGR is not directly compatible)
+- IGeometry should be IGeometry{WKBType} for easy Schema detection, fix upstream
+- Empty geom column name fix should be moved upstream
 - More drivers selected on extension
 - CRS stored in metadata
+- Work on Geointerface integration
+- Work on spatial joins/filters
+- Override showing of WKT geometry on print for performance
+
