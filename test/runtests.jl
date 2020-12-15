@@ -28,28 +28,55 @@ end
 
 
 @testset "GeoDataFrames.jl" begin
-    # Read large file
     fn = "sites.shp"
-    t = GDF.read(fn)
-
-    # Save table with a few random points
     coords = zip(rand(10), rand(10))
-    table = DataFrame(geom=createpoint.(coords), name="test")
-    GDF.write("test_points.shp", table)
-    GDF.write("test_points.gpkg", table, "test_points")
-    GDF.write("test_points.geojson", table, "test_points")
 
-    # Save table from reading
-    GDF.write("test_read.shp", t, "test_coastline")
-    GDF.write("test_read.gpkg", t, "test_coastline")
-    GDF.write("test_read.geojson", t, "test_coastline")
+    @testset "Read actual shapefile" begin
+        # Read large file
+        t = GDF.read(fn)
+        @test nrow(t) == 42
+        @test "ID" in names(t)
+    end
 
-    table.geom = buffer(table.geom, 10)
-    GDF.write("test_polygons.shp", table)
-    GDF.write("test_polygons.gpkg", table)
-    GDF.write("test_polygons.geojson", table)
+    @testset "Read self written file" begin
+        # Save table with a few random points
+        table = DataFrame(geom=createpoint.(coords), name="test")
+        GDF.write("test_points.shp", table)
+        GDF.write("test_points.gpkg", table, "test_points")
+        GDF.write("test_points.geojson", table, "test_points")
 
+        ntable = GDF.read("test_points.shp")
+        @test nrow(ntable) == 10
+        ntable = GDF.read("test_points.gpkg")
+        @test nrow(ntable) == 10
+        ntable = GDF.read("test_points.geojson")
+        @test nrow(ntable) == 10
+    end
 
-    reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
+    @testset "Write actual shapefile" begin
 
+        t = GDF.read(fn)
+
+        # Save table from reading
+        GDF.write("test_read.shp", t, "test_coastline")
+        GDF.write("test_read.gpkg", t, "test_coastline")
+        GDF.write("test_read.geojson", t, "test_coastline")
+
+    end
+
+    @testset "Spatial operations" begin
+        table = DataFrame(geom=createpoint.(coords), name="test")
+
+        # Buffer to also write polygons
+        table.geom = buffer(table.geom, 10)
+        GDF.write("test_polygons.shp", table)
+        GDF.write("test_polygons.gpkg", table)
+        GDF.write("test_polygons.geojson", table)
+    end
+
+    @testset "Reproject" begin
+        table = DataFrame(geom=createpoint.([[0,0,0]]), name="test")
+        reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
+        @test GDF.AG.getpoint(table.geom[1], 0)[1] ≈ -587791.596556932
+    end
 end
