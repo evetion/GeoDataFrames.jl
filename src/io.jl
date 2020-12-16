@@ -42,7 +42,6 @@ function write(fn::AbstractString, table, layer_name::AbstractString="data", geo
             push!(fields, (Symbol(name), type))
         end
     end
-    @info fields
 
     AG.create(
         fn,
@@ -57,7 +56,6 @@ function write(fn::AbstractString, table, layer_name::AbstractString="data", geo
                 AG.addfielddefn!(layer, String(name), fieldmapping[type])
             end
             for row in rows
-                @info row
                 AG.createfeature(layer) do feature
                     AG.setgeom!(feature, getproperty(row, geom_column))
                     for (name, type) in fields
