@@ -1,6 +1,5 @@
 module GeoDataFrames
 # Write your package code here.
-using Reexport
 using ArchGDAL; const AG = ArchGDAL
 using DataFrames
 using Tables
