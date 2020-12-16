@@ -14,11 +14,11 @@ function read(fn::AbstractString, layer::Union{Integer,AbstractString}=0)
     layer = AG.getlayer(ds, layer)
     table = AG.Table(layer)
     df = DataFrame(table)
-    "" in names(df) && rename!(df, Dict(Symbol("") => "geom", ))  # needed for now
+    "" in names(df) && rename!(df, Dict(Symbol("") => :geom, ))  # needed for now
     df
 end
 
-function write(fn::AbstractString, table, layer_name::AbstractString="data", geom_column::Symbol=Symbol("geom"), crs::GFT.GeoFormat=GFT.EPSG(4326), driver::Union{Nothing,AbstractString}=nothing)
+function write(fn::AbstractString, table, layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::GFT.GeoFormat=GFT.EPSG(4326), driver::Union{Nothing,AbstractString}=nothing)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
@@ -36,12 +36,13 @@ function write(fn::AbstractString, table, layer_name::AbstractString="data", geo
     end
 
     # Figure out attributes
-    fields = Vector{Tuple{AbstractString,DataType}}()
+    fields = Vector{Tuple{Symbol,DataType}}()
     for (name, type) in zip(sch.names, sch.types)
         if type != AG.IGeometry && name != geom_column
-            push!(fields, (String(name), type))
+            push!(fields, (Symbol(name), type))
         end
     end
+    @info fields
 
     AG.create(
         fn,
@@ -53,13 +54,14 @@ function write(fn::AbstractString, table, layer_name::AbstractString="data", geo
             spatialref=AG.importCRS(crs)
         ) do layer
             for (name, type) in fields
-                AG.addfielddefn!(layer, name, fieldmapping[type])
+                AG.addfielddefn!(layer, String(name), fieldmapping[type])
             end
             for row in rows
+                @info row
                 AG.createfeature(layer) do feature
-                    AG.setgeom!(feature, row[geom_column])
+                    AG.setgeom!(feature, getproperty(row, geom_column))
                     for (name, type) in fields
-                        AG.setfield!(feature, AG.findfieldindex(feature, name), row[name])
+                        AG.setfield!(feature, AG.findfieldindex(feature, name), getproperty(row, name))
                     end
                 end
             end
