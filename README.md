@@ -66,6 +66,7 @@ df
 
 Reprojection
 ```julia
+using GeoFormatTypes; const GFT=GeoFormatTypes
 df.geom = reproject(df.geom, GFT.EPSG(4326), GFT.EPSG(28992))
 df
 10×2 DataFrame
