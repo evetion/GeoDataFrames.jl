@@ -18,7 +18,7 @@ function read(fn::AbstractString, layer::Union{Integer,AbstractString}=0)
     df
 end
 
-function write(fn::AbstractString, table, layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::GFT.GeoFormat=GFT.EPSG(4326), driver::Union{Nothing,AbstractString}=nothing)
+function write(fn::AbstractString, table; layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::GFT.GeoFormat=GFT.EPSG(4326), driver::Union{Nothing,AbstractString}=nothing)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
