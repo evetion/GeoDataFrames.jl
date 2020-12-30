@@ -42,8 +42,8 @@ end
         # Save table with a few random points
         table = DataFrame(geom=createpoint.(coords), name="test")
         GDF.write("test_points.shp", table)
-        GDF.write("test_points.gpkg", table, "test_points")
-        GDF.write("test_points.geojson", table, "test_points")
+        GDF.write("test_points.gpkg", table, layer_name="test_points")
+        GDF.write("test_points.geojson", table, layer_name="test_points")
 
         ntable = GDF.read("test_points.shp")
         @test nrow(ntable) == 10
@@ -58,9 +58,9 @@ end
         t = GDF.read(fn)
 
         # Save table from reading
-        GDF.write("test_read.shp", t, "test_coastline")
-        GDF.write("test_read.gpkg", t, "test_coastline")
-        GDF.write("test_read.geojson", t, "test_coastline")
+        GDF.write("test_read.shp", t, layer_name="test_coastline")
+        GDF.write("test_read.gpkg", t, layer_name="test_coastline")
+        GDF.write("test_read.geojson", t, layer_name="test_coastline")
 
     end
 
@@ -78,5 +78,6 @@ end
         table = DataFrame(geom=createpoint.([[0,0,0]]), name="test")
         reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
         @test GDF.AG.getpoint(table.geom[1], 0)[1] ≈ -587791.596556932
+        GDF.write("test_reprojection.gpkg", table, crs=GFT.EPSG(28992))
     end
 end
