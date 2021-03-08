@@ -10,8 +10,7 @@ Simple geographical vector interaction built on top of [ArchGDAL](https://github
 
 # Installation
 ```julia
-] add https://github.com/evetion/GeoDataFrames.jl.git
-] add GeoDataFrames  # once registered
+]add GeoDataFrame
 ```
 
 # Usage
