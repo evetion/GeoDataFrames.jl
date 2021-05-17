@@ -9,8 +9,8 @@ const fieldmapping = Dict(v => k for (k, v) in AG._FIELDTYPE)
 
 
 
-function read(fn::AbstractString, layer::Union{Integer,AbstractString}=0)
-    ds = AG.read(fn)
+function read(fn::AbstractString, layer::Union{Integer,AbstractString}=0; kwargs...)
+    ds = AG.read(fn; kwargs...)
     layer = AG.getlayer(ds, layer)
     table = AG.Table(layer)
     df = DataFrame(table)

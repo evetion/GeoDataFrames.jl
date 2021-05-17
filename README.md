@@ -6,7 +6,7 @@
 
 Simple geographical vector interaction built on top of [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/). Inspiration from geopandas.
 
-** this is a draft, it needs polishing **
+** this is a beta, it needs polishing **
 
 # Installation
 ```julia
@@ -14,7 +14,7 @@ Simple geographical vector interaction built on top of [ArchGDAL](https://github
 ```
 
 # Usage
-Writing
+## Writing
 ```julia
 using GeoDataFrames; const GDF=GeoDataFrames
 using DataFrames
@@ -24,7 +24,13 @@ df = DataFrame(geom=createpoint.(coords), name="test");
 GDF.write("test_points.shp", df)
 ```
 
-Reading
+You can also set options such as the layername or crs.
+```julia
+using GeoFormatTypes; const GFT = GeoFormatTypes
+GDF.write("test_points.shp", df; layer_name="data", geom_column=:geom, crs=GFT.EPSG(4326))
+```
+
+## Reading
 ```julia
 df = GDF.read("test_points.shp")
 10×2 DataFrame
@@ -43,7 +49,18 @@ df = GDF.read("test_points.shp")
   10 │ test    Geometry: POINT (0.1207370929831…
 ```
 
-Geometric operations
+You can also specify the layer index or layer name in opening, useful if there are multiple layers:
+```julia
+GDF.read("test_points.shp", 0)
+GDF.read("test_points.shp", "test_points")
+```
+
+Any keywords arguments are passed on to the underlying ArchGDAL [`read`](https://yeesian.com/ArchGDAL.jl/dev/reference/#ArchGDAL.read-Tuple%7BAbstractString%7D) function:
+```julia
+GDF.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM_COLUMNS=NO"])
+```
+
+## Geometric operations
 ```julia
 df.geom = buffer(df.geom, 10);
 df
@@ -63,7 +80,7 @@ df
   10 │ test    Geometry: POLYGON ((20.937183925…
 ```
 
-Reprojection
+## Reprojection
 ```julia
 using GeoFormatTypes; const GFT=GeoFormatTypes
 df.geom = reproject(df.geom, GFT.EPSG(4326), GFT.EPSG(28992))
@@ -84,7 +101,7 @@ df
   10 │ Geometry: POLYGON ((-435978.6036…  test
 ```
 
-Plotting
+## Plotting
 ```julia
 using Plots
 plot(df.geom)
