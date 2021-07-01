@@ -4,15 +4,13 @@ const drivermapping = Dict(
     ".gpkg" => "GPKG",
     ".geojson" => "GeoJSON",
 )
-const fieldmapping = Dict(v => k for (k, v) in AG._FIELDTYPE)
 
 
 
 
 function read(fn::AbstractString, layer::Union{Integer,AbstractString}=0; kwargs...)
     ds = AG.read(fn; kwargs...)
-    layer = AG.getlayer(ds, layer)
-    table = AG.Table(layer)
+    table = AG.getlayer(ds, layer)
     df = DataFrame(table)
     "" in names(df) && rename!(df, Dict(Symbol("") => :geom, ))  # needed for now
     df
@@ -42,7 +40,6 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
             push!(fields, (Symbol(name), type))
         end
     end
-
     AG.create(
         fn,
         driver=driver
@@ -53,7 +50,8 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
             spatialref=AG.importCRS(crs)
         ) do layer
             for (name, type) in fields
-                AG.addfielddefn!(layer, String(name), fieldmapping[type])
+                etype = convert(AG.OGRFieldType, type)
+                AG.addfielddefn!(layer, String(name), etype)
             end
             for row in rows
                 AG.createfeature(layer) do feature
