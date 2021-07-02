@@ -9,9 +9,24 @@ const fieldmapping = Dict(v => k for (k, v) in AG._FIELDTYPE)
 
 
 
-function read(fn::AbstractString, layer::Union{Integer,AbstractString}=0; kwargs...)
+function read(fn::AbstractString; kwargs...)
     ds = AG.read(fn; kwargs...)
+    if ArchGDAL.nlayer(ds) > 1
+        @warn "This file has multiple layers, you only get the first layer by default now."
+    end
+    read(ds, 0)
+end
+
+function read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
+    ds = AG.read(fn; kwargs...)
+    read(ds, layer)
+end
+
+function read(ds, layer)
     layer = AG.getlayer(ds, layer)
+    if layer.ptr == C_NULL
+        throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
+    end
     table = AG.Table(layer)
     df = DataFrame(table)
     "" in names(df) && rename!(df, Dict(Symbol("") => :geom, ))  # needed for now

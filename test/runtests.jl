@@ -28,15 +28,38 @@ end
 
 
 @testset "GeoDataFrames.jl" begin
-    fn = "sites.shp"
+    fn = joinpath(testdatadir, "sites.shp")
     coords = zip(rand(10), rand(10))
 
-    @testset "Read actual shapefile" begin
-        # Read large file
+    @testset "Read shapefile" begin
         t = GDF.read(fn)
         @test nrow(t) == 42
         @test "ID" in names(t)
     end
+
+    @testset "Read shapefile with layer id" begin
+        t = GDF.read(fn, 0)
+        @test nrow(t) == 42
+        @test "ID" in names(t)
+    end
+
+    @testset "Read shapefile with layer name" begin
+        t = GDF.read(fn, "sites")
+        @test nrow(t) == 42
+        @test "ID" in names(t)
+    end
+
+    @testset "Read shapefile with non-existing layer name" begin
+        @test_throws ArgumentError GDF.read(fn, "foo")
+    end
+
+    # @testset "Read shapefile with NULLs" begin
+    #     fnn = joinpath(testdatadir, "null.gpkg")
+    #     t = GDF.read(fnn)
+    #     @test nrow(t) == 2
+    #     @test "ID" in names(t)
+    #     @test t.t == [1,2]
+    # end
 
     @testset "Read self written file" begin
         # Save table with a few random points
@@ -53,7 +76,7 @@ end
         @test nrow(ntable) == 10
     end
 
-    @testset "Write actual shapefile" begin
+    @testset "Write shapefile" begin
 
         t = GDF.read(fn)
 
