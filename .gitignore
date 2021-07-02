@@ -1,4 +1,4 @@
-/docs/build/
+docs/build/
 
 *.gpkg
 *.geojson
