@@ -3,6 +3,7 @@ using Test
 using DataFrames
 using GeoFormatTypes; const GFT = GeoFormatTypes
 using Pkg.PlatformEngines
+using Dates
 
 # Use ArchGDAL datasets to test with
 probe_platform_engines!()  # for download
@@ -64,6 +65,21 @@ end
 
     end
 
+    @testset "Write shapefile with non-GDAL types" begin
+        coords = zip(rand(Float32, 2), rand(Float32, 2))
+        t = DataFrame(geom=createpoint.(coords), name=["test", "test2"], check=[false, true], z=[Float32(8), Float32(-1)], odd=[1, missing], date=[now(), now()])
+
+        GDF.write("test_exotic.shp", t)
+        GDF.write("test_exotic.gpkg", t)
+        GDF.write("test_exotic.geojson", t)
+    end
+
+    @testset "Read shapefile with non-GDAL types" begin
+        t = GDF.read("test_exotic.shp")
+        GDF.read("test_exotic.gpkg")
+        GDF.read("test_exotic.geojson")
+    end
+
     @testset "Spatial operations" begin
         table = DataFrame(geom=createpoint.(coords), name="test")
 
@@ -73,7 +89,7 @@ end
         GDF.write("test_polygons.gpkg", table)
         GDF.write("test_polygons.geojson", table)
     end
-
+        
     @testset "Reproject" begin
         table = DataFrame(geom=createpoint.([[0,0,0]]), name="test")
         reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
