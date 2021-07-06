@@ -3,6 +3,7 @@ using Test
 using DataFrames
 using GeoFormatTypes; const GFT = GeoFormatTypes
 using Pkg.PlatformEngines
+using Dates
 
 # Use ArchGDAL datasets to test with
 probe_platform_engines!()  # for download
@@ -28,15 +29,38 @@ end
 
 
 @testset "GeoDataFrames.jl" begin
-    fn = "sites.shp"
+    fn = joinpath(testdatadir, "sites.shp")
     coords = zip(rand(10), rand(10))
 
-    @testset "Read actual shapefile" begin
-        # Read large file
+    @testset "Read shapefile" begin
         t = GDF.read(fn)
         @test nrow(t) == 42
         @test "ID" in names(t)
     end
+
+    @testset "Read shapefile with layer id" begin
+        t = GDF.read(fn, 0)
+        @test nrow(t) == 42
+        @test "ID" in names(t)
+    end
+
+    @testset "Read shapefile with layer name" begin
+        t = GDF.read(fn, "sites")
+        @test nrow(t) == 42
+        @test "ID" in names(t)
+    end
+
+    @testset "Read shapefile with non-existing layer name" begin
+        @test_throws ArgumentError GDF.read(fn, "foo")
+    end
+
+    # @testset "Read shapefile with NULLs" begin
+    #     fnn = joinpath(testdatadir, "null.gpkg")
+    #     t = GDF.read(fnn)
+    #     @test nrow(t) == 2
+    #     @test "ID" in names(t)
+    #     @test t.t == [1,2]
+    # end
 
     @testset "Read self written file" begin
         # Save table with a few random points
@@ -53,7 +77,7 @@ end
         @test nrow(ntable) == 10
     end
 
-    @testset "Write actual shapefile" begin
+    @testset "Write shapefile" begin
 
         t = GDF.read(fn)
 
@@ -62,6 +86,21 @@ end
         GDF.write("test_read.gpkg", t, layer_name="test_coastline")
         GDF.write("test_read.geojson", t, layer_name="test_coastline")
 
+    end
+
+    @testset "Write shapefile with non-GDAL types" begin
+        coords = zip(rand(Float32, 2), rand(Float32, 2))
+        t = DataFrame(geom=createpoint.(coords), name=["test", "test2"], check=[false, true], z=[Float32(8), Float32(-1)], odd=[1, missing], date=[now(), now()])
+
+        GDF.write("test_exotic.shp", t)
+        GDF.write("test_exotic.gpkg", t)
+        GDF.write("test_exotic.geojson", t)
+    end
+
+    @testset "Read shapefile with non-GDAL types" begin
+        t = GDF.read("test_exotic.shp")
+        GDF.read("test_exotic.gpkg")
+        GDF.read("test_exotic.geojson")
     end
 
     @testset "Spatial operations" begin
@@ -73,7 +112,7 @@ end
         GDF.write("test_polygons.gpkg", table)
         GDF.write("test_polygons.geojson", table)
     end
-
+        
     @testset "Reproject" begin
         table = DataFrame(geom=createpoint.([[0,0,0]]), name="test")
         reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))

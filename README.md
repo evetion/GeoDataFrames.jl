@@ -6,7 +6,7 @@
 
 Simple geographical vector interaction built on top of [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/). Inspiration from geopandas.
 
-** this is a beta, it needs polishing **
+** note that reading missing values currently doesn't work **
 
 # Installation
 ```julia
