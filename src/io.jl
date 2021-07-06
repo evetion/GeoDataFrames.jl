@@ -9,17 +9,16 @@ const drivermapping = Dict(
     ".gml" => "GML",
     ".nc" => "netCDF",
 )
-const fieldmapping = Dict(v => k for (k, v) in AG._FIELDTYPE)
 
 # Support "exotic" types, but this needs some piracy
-fieldmapping[Float32] = fieldmapping[Float64]
-fieldmapping[Int16] = fieldmapping[Int32]
-fieldmapping[Bool] = fieldmapping[Int32]
+Base.convert(::Type{AG.OGRFieldType}, ft::Type{Bool}) = AG.OFTInteger
+Base.convert(::Type{AG.OGRFieldType}, ft::Type{Int16}) = AG.OFTInteger
+Base.convert(::Type{AG.OGRFieldType}, ft::Type{Float32}) = AG.OFTReal
 
 subtypes = Dict(
-    Bool => AG.GDAL.OFSTBoolean,
-    Int16 => AG.GDAL.OFSTInt16,
-    Float32 => AG.GDAL.OFSTFloat32,
+    Bool => AG.OFSTBoolean,
+    Int16 => AG.OFSTInt16,
+    Float32 => AG.OFSTFloat32,
     )
 
 function AG.setfield!(feature::AG.Feature, i::Integer, value::Int16)
@@ -51,11 +50,10 @@ function read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs..
 end
 
 function read(ds, layer)
-    layer = AG.getlayer(ds, layer)
-    if layer.ptr == C_NULL
+    table = AG.getlayer(ds, layer)
+    if table.ptr == C_NULL
         throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
     end
-    table = AG.Table(layer)
     df = DataFrame(table)
     "" in names(df) && rename!(df, Dict(Symbol("") => :geom, ))  # needed for now
     df
@@ -92,7 +90,6 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
             end
         end
     end
-
     AG.create(
         fn,
         driver=driver
@@ -103,8 +100,8 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
             spatialref=AG.importCRS(crs)
         ) do layer
             for (name, type) in fields
-                AG.createfielddefn(String(name), fieldmapping[type]) do fd
-                    AG.setsubtype!(fd, get(subtypes, type, AG.GDAL.OFSTNone))
+                AG.createfielddefn(String(name), convert(AG.OGRFieldType, type)) do fd
+                    AG.setsubtype!(fd, get(subtypes, type, AG.OFSTNone))
                     AG.addfielddefn!(layer, fd)
                 end
             end
