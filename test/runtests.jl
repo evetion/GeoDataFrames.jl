@@ -90,7 +90,18 @@ end
 
     @testset "Write shapefile with non-GDAL types" begin
         coords = zip(rand(Float32, 2), rand(Float32, 2))
-        t = DataFrame(geom=createpoint.(coords), name=["test", "test2"], check=[false, true], z=[Float32(8), Float32(-1)], odd=[1, missing], date=[now(), now()])
+        t = DataFrame(
+            geom=createpoint.(coords),
+            name=["test", "test2"],
+            flag=[typemax(UInt8), typemax(UInt8)],
+            ex1=[typemax(Int8), typemax(Int8)],
+            ex2=[typemax(UInt16), typemax(UInt16)],
+            ex3=[typemax(UInt32), typemax(UInt32)],
+            check=[false, true],
+            z=[Float32(8), Float32(-1)],
+            odd=[1, missing],
+            date=[now(), now()]
+            )
 
         GDF.write("test_exotic.shp", t)
         GDF.write("test_exotic.gpkg", t)
@@ -112,7 +123,7 @@ end
         GDF.write("test_polygons.gpkg", table)
         GDF.write("test_polygons.geojson", table)
     end
-        
+
     @testset "Reproject" begin
         table = DataFrame(geom=createpoint.([[0,0,0]]), name="test")
         reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
