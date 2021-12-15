@@ -104,10 +104,10 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
 
     # Find driver
     _, extension = splitext(fn)
-    if extension in keys(drivermapping)
-        driver = AG.getdriver(drivermapping[extension])
-    elseif driver !== nothing
+    if driver !== nothing
         driver = AG.getdriver(driver)
+    elseif extension in keys(drivermapping)
+        driver = AG.getdriver(drivermapping[extension])
     else
         error("Couldn't determine driver for $extension. Please provide one of $(keys(drivermapping))")
     end
