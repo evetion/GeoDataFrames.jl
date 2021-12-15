@@ -1,9 +1,9 @@
 module GeoDataFrames
-# Write your package code here.
-using ArchGDAL; const AG = ArchGDAL
+
+import ArchGDAL as AG
 using DataFrames
 using Tables
-using GeoFormatTypes; const GFT = GeoFormatTypes
+import GeoFormatTypes as GFT
 
 include("exports.jl")
 include("io.jl")

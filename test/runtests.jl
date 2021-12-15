@@ -1,7 +1,7 @@
-using GeoDataFrames; const GDF = GeoDataFrames
+import GeoDataFrames as GDF
 using Test
 using DataFrames
-using GeoFormatTypes; const GFT = GeoFormatTypes
+import GeoFormatTypes as GFT
 using Pkg.PlatformEngines
 using Dates
 
