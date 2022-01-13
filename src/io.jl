@@ -95,7 +95,7 @@ function read(ds, layer)
     df
 end
 
-function write(fn::AbstractString, table; layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::GFT.GeoFormat=GFT.EPSG(4326), driver::Union{Nothing,AbstractString}=nothing)
+function write(fn::AbstractString, table; layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::Union{GFT.GeoFormat, Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
@@ -130,10 +130,11 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
         fn,
         driver=driver
     ) do ds
+        spatialref = crs === nothing ? AG.SpatialRef() : AG.importCRS(crs)
         AG.createlayer(
             name=layer_name,
             geom=geom_type,
-            spatialref=AG.importCRS(crs)
+            spatialref=spatialref
         ) do layer
             for (name, type) in fields
                 AG.createfielddefn(String(name), convert(AG.OGRFieldType, type)) do fd
