@@ -7,8 +7,6 @@ import GeoDataFrames as GDF
 import GeoFormatTypes as GFT
 
 # Use ArchGDAL datasets to test with
-probe_platform_engines!()  # for download
-
 const testdatadir = @__DIR__
 
 REPO_URL = "https://github.com/yeesian/ArchGDALDatasets/blob/master/"
