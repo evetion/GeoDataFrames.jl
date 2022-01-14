@@ -38,7 +38,7 @@ subtypes = Dict(
     Float32 => AG.OFSTFloat32,
     Int8 => AG.OFSTInt16,
     UInt8 => AG.OFSTInt16,
-    )
+)
 
 
 function AG.setfield!(feature::AG.Feature, i::Integer, value::Bool)
@@ -74,7 +74,7 @@ end
 
 function read(fn::AbstractString; kwargs...)
     ds = AG.read(fn; kwargs...)
-    if ArchGDAL.nlayer(ds) > 1
+    if AG.nlayer(ds) > 1
         @warn "This file has multiple layers, you only get the first layer by default now."
     end
     read(ds, 0)
@@ -91,11 +91,11 @@ function read(ds, layer)
         throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
     end
     df = DataFrame(table)
-    "" in names(df) && rename!(df, Dict(Symbol("") => :geom, ))  # needed for now
+    "" in names(df) && rename!(df, Dict(Symbol("") => :geom,))  # needed for now
     df
 end
 
-function write(fn::AbstractString, table; layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::GFT.GeoFormat=GFT.EPSG(4326), driver::Union{Nothing,AbstractString}=nothing)
+function write(fn::AbstractString, table; layer_name::AbstractString = "data", geom_column::Symbol = :geom, crs::GFT.GeoFormat = GFT.EPSG(4326), driver::Union{Nothing,AbstractString} = nothing)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
@@ -128,12 +128,12 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
     end
     AG.create(
         fn,
-        driver=driver
+        driver = driver
     ) do ds
         AG.createlayer(
-            name=layer_name,
-            geom=geom_type,
-            spatialref=AG.importCRS(crs)
+            name = layer_name,
+            geom = geom_type,
+            spatialref = AG.importCRS(crs)
         ) do layer
             for (name, type) in fields
                 AG.createfielddefn(String(name), convert(AG.OGRFieldType, type)) do fd
@@ -154,7 +154,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
                     end
                 end
             end
-            AG.copy(layer, dataset=ds, name=layer_name)
+            AG.copy(layer, dataset = ds, name = layer_name)
         end
     end
     fn
