@@ -20,7 +20,7 @@ macro reexport(ex)
     end
 
     esc(Expr(:toplevel, ex,
-             [:(eval(Expr(:export, names($mod)...))) for mod in modules]...))
+        [:(eval(Expr(:export, names($mod)...))) for mod in modules]...))
 end
 
 
@@ -30,7 +30,7 @@ end
 @reexport using ArchGDAL: geomlength, geomarea, centroid
 @reexport using ArchGDAL: isempty, isvalid, issimple, isring, geomarea, centroid
 @reexport using ArchGDAL: createpoint, createlinestring, createlinearring, createpolygon, createmultilinestring, createmultipolygon
-@reexport using ArchGDAL:reproject
+@reexport using ArchGDAL: reproject
 
 AG.intersects(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.intersects.(a, b)
 AG.equals(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X,T} = AG.equals.(a, b)

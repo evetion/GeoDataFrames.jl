@@ -16,7 +16,7 @@ Simple geographical vector interaction built on top of [ArchGDAL](https://github
 # Usage
 ## Writing
 ```julia
-using GeoDataFrames; const GDF=GeoDataFrames
+import GeoDataFrames as GDF
 using DataFrames
 
 coords = zip(rand(10), rand(10))
@@ -26,7 +26,7 @@ GDF.write("test_points.shp", df)
 
 You can also set options such as the layername or crs.
 ```julia
-using GeoFormatTypes; const GFT = GeoFormatTypes
+import GeoFormatTypes as GFT
 GDF.write("test_points.shp", df; layer_name="data", geom_column=:geom, crs=GFT.EPSG(4326))
 ```
 
@@ -82,7 +82,7 @@ df
 
 ## Reprojection
 ```julia
-using GeoFormatTypes; const GFT=GeoFormatTypes
+import GeoFormatTypes as GFT
 df.geom = reproject(df.geom, GFT.EPSG(4326), GFT.EPSG(28992))
 df
 10×2 DataFrame
