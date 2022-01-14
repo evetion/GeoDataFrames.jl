@@ -6,11 +6,11 @@
 
 Simple geographical vector interaction built on top of [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/). Inspiration from geopandas.
 
-** note that reading missing values currently doesn't work **
+*note that reading missing values currently doesn't work*
 
 # Installation
 ```julia
-]add GeoDataFrame
+]add GeoDataFrames
 ```
 
 # Usage
