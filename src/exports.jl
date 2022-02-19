@@ -28,7 +28,7 @@ end
 @reexport using ArchGDAL: boundary, convexhull, buffer
 @reexport using ArchGDAL: intersection, union, difference, symdifference, distance
 @reexport using ArchGDAL: geomlength, geomarea, centroid
-@reexport using ArchGDAL: isempty, isvalid, issimple, isring, geomarea, centroid
+@reexport using ArchGDAL: isvalid, issimple, isring, geomarea, centroid
 @reexport using ArchGDAL: createpoint, createlinestring, createlinearring, createpolygon, createmultilinestring, createmultipolygon
 @reexport using ArchGDAL: reproject
 
