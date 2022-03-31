@@ -10,68 +10,6 @@ const drivermapping = Dict(
     ".nc" => "netCDF",
 )
 
-# Support "exotic" types, but this needs some piracy
-Base.convert(::Type{AG.OGRFieldType}, ft::Type{Bool}) = AG.OFTInteger
-Base.convert(::Type{AG.OGRFieldType}, ft::Type{Int16}) = AG.OFTInteger
-Base.convert(::Type{AG.OGRFieldType}, ft::Type{Float32}) = AG.OFTReal
-
-function Base.convert(::Type{AG.OGRFieldType}, ft::Type{Int8})
-    @warn "Int8 fields will become Int16"
-    return AG.OFTInteger
-end
-function Base.convert(::Type{AG.OGRFieldType}, ft::Type{UInt8})
-    @warn "UInt8 fields will become Int16"
-    return AG.OFTInteger
-end
-function Base.convert(::Type{AG.OGRFieldType}, ft::Type{UInt16})
-    @warn "UInt16 fields will become Int32"
-    return AG.OFTInteger
-end
-function Base.convert(::Type{AG.OGRFieldType}, ft::Type{UInt32})
-    @warn "UInt32 fields will become Int64"
-    return AG.OFTInteger64
-end
-
-subtypes = Dict(
-    Bool => AG.OFSTBoolean,
-    Int16 => AG.OFSTInt16,
-    Float32 => AG.OFSTFloat32,
-    Int8 => AG.OFSTInt16,
-    UInt8 => AG.OFSTInt16,
-)
-
-
-function AG.setfield!(feature::AG.Feature, i::Integer, value::Bool)
-    AG.GDAL.ogr_f_setfieldinteger(feature.ptr, i, value)
-    return feature
-end
-
-function AG.setfield!(feature::AG.Feature, i::Integer, value::Int16)
-    AG.GDAL.ogr_f_setfieldinteger(feature.ptr, i, value)
-    return feature
-end
-
-function AG.setfield!(feature::AG.Feature, i::Integer, value::Float32)
-    AG.GDAL.ogr_f_setfielddouble(feature.ptr, i, value)
-    return feature
-end
-
-function AG.setfield!(feature::AG.Feature, i::Integer, value::Union{UInt8,Int8})
-    AG.GDAL.ogr_f_setfielddouble(feature.ptr, i, Int16(value))
-    return feature
-end
-
-function AG.setfield!(feature::AG.Feature, i::Integer, value::UInt16)
-    AG.GDAL.ogr_f_setfielddouble(feature.ptr, i, Int32(value))
-    return feature
-end
-
-function AG.setfield!(feature::AG.Feature, i::Integer, value::UInt32)
-    AG.GDAL.ogr_f_setfielddouble(feature.ptr, i, Int64(value))
-    return feature
-end
-
-
 function read(fn::AbstractString; kwargs...)
     ds = AG.read(fn; kwargs...)
     if AG.nlayer(ds) > 1
@@ -95,7 +33,7 @@ function read(ds, layer)
     df
 end
 
-function write(fn::AbstractString, table; layer_name::AbstractString = "data", geom_column::Symbol = :geom, crs::Union{GFT.GeoFormat,Nothing} = nothing, driver::Union{Nothing,AbstractString} = nothing)
+function write(fn::AbstractString, table; layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
@@ -128,17 +66,17 @@ function write(fn::AbstractString, table; layer_name::AbstractString = "data", g
     end
     AG.create(
         fn,
-        driver = driver
+        driver=driver
     ) do ds
         spatialref = crs === nothing ? AG.SpatialRef() : AG.importCRS(crs)
         AG.createlayer(
-            name = layer_name,
-            geom = geom_type,
-            spatialref = spatialref
+            name=layer_name,
+            geom=geom_type,
+            spatialref=spatialref
         ) do layer
             for (name, type) in fields
                 AG.createfielddefn(String(name), convert(AG.OGRFieldType, type)) do fd
-                    AG.setsubtype!(fd, get(subtypes, type, AG.OFSTNone))
+                    AG.setsubtype!(fd, convert(AG.OGRFieldSubType, type))
                     AG.addfielddefn!(layer, fd)
                 end
             end
@@ -155,7 +93,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString = "data", g
                     end
                 end
             end
-            AG.copy(layer, dataset = ds, name = layer_name)
+            AG.copy(layer, dataset=ds, name=layer_name)
         end
     end
     fn
