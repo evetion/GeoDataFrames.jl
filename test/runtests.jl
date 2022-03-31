@@ -7,8 +7,8 @@ import GeoDataFrames as GDF
 import GeoFormatTypes as GFT
 
 # Use ArchGDAL datasets to test with
-const testdatadir = @__DIR__
-
+const testdatadir = joinpath(@__DIR__, "data")
+isdir(testdatadir) || mkdir(testdatadir)
 REPO_URL = "https://github.com/yeesian/ArchGDALDatasets/blob/master/"
 
 remotefiles = [
@@ -23,7 +23,7 @@ remotefiles = [
 for (f, sha) in remotefiles
     localfn = joinpath(testdatadir, basename(f))
     url = REPO_URL * f * "?raw=true"
-    PlatformEngines.download_verify(url, sha, localfn; force = true)
+    PlatformEngines.download_verify(url, sha, localfn; force=true)
 end
 
 
@@ -63,10 +63,10 @@ end
 
     @testset "Read self written file" begin
         # Save table with a few random points
-        table = DataFrame(geom = AG.createpoint.(coords), name = "test")
+        table = DataFrame(geom=AG.createpoint.(coords), name="test")
         GDF.write("test_points.shp", table)
-        GDF.write("test_points.gpkg", table, layer_name = "test_points")
-        GDF.write("test_points.geojson", table, layer_name = "test_points")
+        GDF.write("test_points.gpkg", table, layer_name="test_points")
+        GDF.write("test_points.geojson", table, layer_name="test_points")
 
         ntable = GDF.read("test_points.shp")
         @test nrow(ntable) == 10
@@ -81,40 +81,54 @@ end
         t = GDF.read(fn)
 
         # Save table from reading
-        GDF.write("test_read.shp", t, layer_name = "test_coastline")
-        GDF.write("test_read.gpkg", t, layer_name = "test_coastline")
-        GDF.write("test_read.geojson", t, layer_name = "test_coastline")
+        GDF.write("test_read.shp", t, layer_name="test_coastline")
+        GDF.write("test_read.gpkg", t, layer_name="test_coastline")
+        GDF.write("test_read.geojson", t, layer_name="test_coastline")
 
     end
 
     @testset "Write shapefile with non-GDAL types" begin
-        coords = zip(rand(Float32, 2), rand(Float32, 2))
+        coords = collect(zip(rand(Float32, 2), rand(Float32, 2)))
         t = DataFrame(
-            geom = AG.createpoint.(coords),
-            name = ["test", "test2"],
-            flag = [typemax(UInt8), typemax(UInt8)],
-            ex1 = [typemax(Int8), typemax(Int8)],
-            ex2 = [typemax(UInt16), typemax(UInt16)],
-            ex3 = [typemax(UInt32), typemax(UInt32)],
-            check = [false, true],
-            z = [Float32(8), Float32(-1)],
-            odd = [1, missing],
-            date = [now(), now()]
+            geom=AG.createpoint.(coords),
+            name=["test", "test2"],
+            flag=UInt8[typemin(UInt8), typemax(UInt8)],
+            ex1=Int16[typemin(Int8), typemax(Int8)],
+            ex2=Int32[typemin(UInt16), typemax(UInt16)],
+            ex3=Int64[typemin(UInt32), typemax(UInt32)],
+            check=[false, true],
+            z=Float32[Float32(8), Float32(-1)],
+            y=Float16[Float16(8), Float16(-1)],
+            odd=[1, missing],
+            date=[DateTime("2022-03-31T15:38:41"), DateTime("2022-03-31T15:38:41")]
         )
-
+        rm("test_exotic.shp")
+        rm("test_exotic.gpkg")
+        rm("test_exotic.geojson")
         GDF.write("test_exotic.shp", t)
         GDF.write("test_exotic.gpkg", t)
         GDF.write("test_exotic.geojson", t)
+        tt = GDF.read("test_exotic.gpkg")
+        @test AG.getx.(tt.geom, 0) == AG.getx.(t.geom, 0)
+        @test tt.flag == t.flag
+        @test tt.ex1 == t.ex1
+        @test tt.ex2 == t.ex2
+        @test tt.ex3 == t.ex3
+        @test tt.check == t.check
+        @test tt.z == t.z
+        @test tt.y == t.y
+        @test ismissing.(tt.odd) == ismissing.(t.odd)
+        @test tt.date == t.date
     end
 
     @testset "Read shapefile with non-GDAL types" begin
-        t = GDF.read("test_exotic.shp")
+        GDF.read("test_exotic.shp")
         GDF.read("test_exotic.gpkg")
         GDF.read("test_exotic.geojson")
     end
 
     @testset "Spatial operations" begin
-        table = DataFrame(geom = AG.createpoint.(coords), name = "test")
+        table = DataFrame(geom=AG.createpoint.(coords), name="test")
 
         # Buffer to also write polygons
         table.geom = AG.buffer(table.geom, 10)
@@ -124,9 +138,9 @@ end
     end
 
     @testset "Reproject" begin
-        table = DataFrame(geom = AG.createpoint.([[0, 0, 0]]), name = "test")
+        table = DataFrame(geom=AG.createpoint.([[0, 0, 0]]), name="test")
         AG.reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
         @test GDF.AG.getpoint(table.geom[1], 0)[1] ≈ -587791.596556932
-        GDF.write("test_reprojection.gpkg", table, crs = GFT.EPSG(28992))
+        GDF.write("test_reprojection.gpkg", table, crs=GFT.EPSG(28992))
     end
 end
