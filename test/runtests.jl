@@ -102,9 +102,6 @@ end
             odd=[1, missing],
             date=[DateTime("2022-03-31T15:38:41"), DateTime("2022-03-31T15:38:41")]
         )
-        rm("test_exotic.shp")
-        rm("test_exotic.gpkg")
-        rm("test_exotic.geojson")
         GDF.write("test_exotic.shp", t)
         GDF.write("test_exotic.gpkg", t)
         GDF.write("test_exotic.geojson", t)
