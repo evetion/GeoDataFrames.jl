@@ -53,13 +53,14 @@ end
         @test_throws ArgumentError GDF.read(fn, "foo")
     end
 
-    # @testset "Read shapefile with NULLs" begin
-    #     fnn = joinpath(testdatadir, "null.gpkg")
-    #     t = GDF.read(fnn)
-    #     @test nrow(t) == 2
-    #     @test "ID" in names(t)
-    #     @test t.t == [1,2]
-    # end
+    @testset "Read shapefile with NULLs" begin
+        fnn = joinpath(testdatadir, "null.gpkg")
+        t = GDF.read(fnn)
+        @test nrow(t) == 2
+        @test "name" in names(t)
+        @test t.name[1] == "test"
+        @test ismissing(t.name[2])
+    end
 
     @testset "Read self written file" begin
         # Save table with a few random points
