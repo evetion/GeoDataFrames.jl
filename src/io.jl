@@ -10,6 +10,13 @@ const drivermapping = Dict(
     ".nc" => "netCDF",
 )
 
+"""
+    read(fn::AbstractString; kwargs...)
+    read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
+
+Read a file into a DataFrame. Any kwargs are passed onto ArchGDAL [here](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}).
+By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
+"""
 function read(fn::AbstractString; kwargs...)
     ds = AG.read(fn; kwargs...)
     if AG.nlayer(ds) > 1
@@ -33,6 +40,11 @@ function read(ds, layer)
     df
 end
 
+"""
+    write(fn::AbstractString, table; layer_name="data", geom_column=:geom, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing)
+
+Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
+"""
 function write(fn::AbstractString, table; layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)

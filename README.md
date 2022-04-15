@@ -4,9 +4,9 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://evetion.github.io/GeoDataFrames.jl/dev)
 [![Build Status](https://travis-ci.com/evetion/GeoDataFrames.jl.svg?branch=master)](https://travis-ci.com/evetion/GeoDataFrames.jl)
 
-Simple geographical vector interaction built on top of [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/). Inspiration from geopandas.
+Simple geographical vector interaction built on top of [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/). Inspiration from [geopandas](https://geopandas.org/en/stable/).
 
-*note that reading missing values currently doesn't work*
+Some basic examples without explanation follow here, for a complete overview, please check the [documentation](https://evetion.github.io/GeoDataFrames.jl/stable).
 
 # Installation
 ```julia
@@ -14,39 +14,26 @@ Simple geographical vector interaction built on top of [ArchGDAL](https://github
 ```
 
 # Usage
-## Writing
-```julia
-import GeoDataFrames as GDF
-using DataFrames
-
-coords = zip(rand(10), rand(10))
-df = DataFrame(geom=createpoint.(coords), name="test");
-GDF.write("test_points.shp", df)
-```
-
-You can also set options such as the layername or crs.
-```julia
-import GeoFormatTypes as GFT
-GDF.write("test_points.shp", df; layer_name="data", geom_column=:geom, crs=GFT.EPSG(4326))
-```
+There's no special type here. You just use normal `DataFrame`s with a `Vector` of ArchGDAL geometries as a column.
 
 ## Reading
 ```julia
+import GeoDataFrames as GDF
 df = GDF.read("test_points.shp")
 10×2 DataFrame
- Row │ name    geom
-     │ String  IGeometr…
-─────┼───────────────────────────────────────────
-   1 │ test    Geometry: POINT (0.2360926400353…
-   2 │ test    Geometry: POINT (0.2445619453460…
-   3 │ test    Geometry: POINT (0.4504663468371…
-   4 │ test    Geometry: POINT (0.0886989855586…
-   5 │ test    Geometry: POINT (0.0323344938606…
-   6 │ test    Geometry: POINT (0.1574232985696…
-   7 │ test    Geometry: POINT (0.9677152948776…
-   8 │ test    Geometry: POINT (0.0047328946715…
-   9 │ test    Geometry: POINT (0.7389241862917…
-  10 │ test    Geometry: POINT (0.1207370929831…
+ Row │ geom                name
+     │ IGeometr…           String
+─────┼────────────────────────────
+   1 │ Geometry: wkbPoint  test
+   2 │ Geometry: wkbPoint  test
+   3 │ Geometry: wkbPoint  test
+   4 │ Geometry: wkbPoint  test
+   5 │ Geometry: wkbPoint  test
+   6 │ Geometry: wkbPoint  test
+   7 │ Geometry: wkbPoint  test
+   8 │ Geometry: wkbPoint  test
+   9 │ Geometry: wkbPoint  test
+  10 │ Geometry: wkbPoint  test
 ```
 
 You can also specify the layer index or layer name in opening, useful if there are multiple layers:
@@ -60,45 +47,60 @@ Any keywords arguments are passed on to the underlying ArchGDAL [`read`](https:/
 GDF.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM_COLUMNS=NO"])
 ```
 
-## Geometric operations
+## Writing
+
 ```julia
-df.geom = buffer(df.geom, 10);
-df
-10×2 DataFrame
- Row │ name    geom
-     │ String  IGeometr…
-─────┼───────────────────────────────────────────
-   1 │ test    Geometry: POLYGON ((20.638287717…
-   2 │ test    Geometry: POLYGON ((20.885374828…
-   3 │ test    Geometry: POLYGON ((20.270896831…
-   4 │ test    Geometry: POLYGON ((20.023799591…
-   5 │ test    Geometry: POLYGON ((20.802042371…
-   6 │ test    Geometry: POLYGON ((20.695573646…
-   7 │ test    Geometry: POLYGON ((20.902189040…
-   8 │ test    Geometry: POLYGON ((20.114554257…
-   9 │ test    Geometry: POLYGON ((20.599242971…
-  10 │ test    Geometry: POLYGON ((20.937183925…
+using DataFrames
+
+coords = zip(rand(10), rand(10))
+df = DataFrame(geom=createpoint.(coords), name="test");
+GDF.write("test_points.shp", df)
 ```
 
-## Reprojection
+You can also set options such as the layername or crs.
+```julia
+import GeoFormatTypes as GFT
+GDF.write("test_points.shp", df; layer_name="data", geom_column=:geom, crs=GFT.EPSG(4326))
+```
+
+## Operations
+The supported operations are the ArchGDAL operations that are exported again to work on Vectors of geometries as well.
+Hence, if you can apply all the [ArchGDAL operations](https://yeesian.com/ArchGDAL.jl/stable/geometries/) yourself.
+
+```julia
+df.geom = buffer(df.geom, 10);  # points turn into polygons
+df
+10×2 DataFrame
+ Row │ geom                  name
+     │ IGeometr…             String
+─────┼──────────────────────────────
+   1 │ Geometry: wkbPolygon  test
+   2 │ Geometry: wkbPolygon  test
+   3 │ Geometry: wkbPolygon  test
+   4 │ Geometry: wkbPolygon  test
+   5 │ Geometry: wkbPolygon  test
+   6 │ Geometry: wkbPolygon  test
+   7 │ Geometry: wkbPolygon  test
+   8 │ Geometry: wkbPolygon  test
+   9 │ Geometry: wkbPolygon  test
+  10 │ Geometry: wkbPolygon  test
+```
+
+### Reprojection
 ```julia
 import GeoFormatTypes as GFT
 df.geom = reproject(df.geom, GFT.EPSG(4326), GFT.EPSG(28992))
-df
-10×2 DataFrame
- Row │ geom                               name
-     │ IGeometr…                          String
-─────┼───────────────────────────────────────────
-   1 │ Geometry: POLYGON ((-461372.5299…  test
-   2 │ Geometry: POLYGON ((-405767.2483…  test
-   3 │ Geometry: POLYGON ((-423945.8813…  test
-   4 │ Geometry: POLYGON ((-426947.9961…  test
-   5 │ Geometry: POLYGON ((-424503.7859…  test
-   6 │ Geometry: POLYGON ((-412986.0226…  test
-   7 │ Geometry: POLYGON ((-453290.1043…  test
-   8 │ Geometry: POLYGON ((-480255.6989…  test
-   9 │ Geometry: POLYGON ((-418753.1604…  test
-  10 │ Geometry: POLYGON ((-435978.6036…  test
+10-element Vector{ArchGDAL.IGeometry{ArchGDAL.wkbPolygon}}:
+ Geometry: POLYGON ((-472026.042542408 -4406233.59953401,-537 ... 401))
+ Geometry: POLYGON ((-417143.506054105 -4395423.99277048,-482 ... 048))
+ Geometry: POLYGON ((-450303.142569437 -4301418.89063867,-515 ... 867))
+ Geometry: POLYGON ((-434522.645535154 -4351075.81124634,-500 ... 634))
+ Geometry: POLYGON ((-443909.665585927 -4412565.43193349,-509 ... 349))
+ Geometry: POLYGON ((-438405.666500747 -4299366.23767677,-503 ... 677))
+ Geometry: POLYGON ((-400588.951193713 -4365333.532287,-46626 ... 287))
+ Geometry: POLYGON ((-409160.489179734 -4388484.98554538,-474 ... 538))
+ Geometry: POLYGON ((-453963.150526169 -4408927.89965336,-519 ... 336))
+ Geometry: POLYGON ((-498317.413693272 -4321687.31588764,-563 ... 764))
 ```
 
 ## Plotting
@@ -107,14 +109,3 @@ using Plots
 plot(df.geom)
 ```
 ![image](img/plot_points.png)
-
-# TODO
-- Prepared geometry, spatial indices (LibGEOS) (probably can't be done as GDAL OGR is not directly compatible)
-- IGeometry should be IGeometry{WKBType} for easy Schema detection, fix upstream
-- Empty geom column name fix should be moved upstream
-- More drivers selected on extension
-- CRS stored in metadata
-- Work on Geointerface integration
-- Work on spatial joins/filters
-- Override showing of WKT geometry on print for performance
-
