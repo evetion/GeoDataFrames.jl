@@ -109,3 +109,6 @@ using Plots
 plot(df.geom)
 ```
 ![image](img/plot_points.png)
+
+## Credit
+We thank Julia Computing for supporting contributions to this package.
