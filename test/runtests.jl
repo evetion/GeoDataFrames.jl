@@ -33,18 +33,23 @@ end
 
     @testset "Read shapefile" begin
         t = GDF.read(fn)
+        @info t
+
         @test nrow(t) == 42
         @test "ID" in names(t)
     end
 
     @testset "Read shapefile with layer id" begin
         t = GDF.read(fn, 0)
+        @info t
+
         @test nrow(t) == 42
         @test "ID" in names(t)
     end
 
     @testset "Read shapefile with layer name" begin
         t = GDF.read(fn, "sites")
+        @info t
         @test nrow(t) == 42
         @test "ID" in names(t)
     end
@@ -65,26 +70,26 @@ end
     @testset "Read self written file" begin
         # Save table with a few random points
         table = DataFrame(geom=AG.createpoint.(coords), name="test")
-        GDF.write("test_points.shp", table)
-        GDF.write("test_points.gpkg", table, layer_name="test_points")
-        GDF.write("test_points.geojson", table, layer_name="test_points")
+        GDF.write(joinpath(testdatadir, "test_points.shp"), table)
+        GDF.write(joinpath(testdatadir, "test_points.gpkg"), table, layer_name="test_points")
+        GDF.write(joinpath(testdatadir, "test_points.geojson"), table, layer_name="test_points")
 
-        ntable = GDF.read("test_points.shp")
+        ntable = GDF.read(joinpath(testdatadir, "test_points.shp"))
         @test nrow(ntable) == 10
-        ntable = GDF.read("test_points.gpkg")
+        ntable = GDF.read(joinpath(testdatadir, "test_points.gpkg"))
         @test nrow(ntable) == 10
-        ntable = GDF.read("test_points.geojson")
+        ntable = GDF.read(joinpath(testdatadir, "test_points.geojson"))
         @test nrow(ntable) == 10
     end
 
     @testset "Write shapefile" begin
 
         t = GDF.read(fn)
-
+        @info t
         # Save table from reading
-        GDF.write("test_read.shp", t, layer_name="test_coastline")
-        GDF.write("test_read.gpkg", t, layer_name="test_coastline")
-        GDF.write("test_read.geojson", t, layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.shp"), t, layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.gpkg"), t, layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.geojson"), t, layer_name="test_coastline")
 
     end
 
@@ -103,10 +108,10 @@ end
             odd=[1, missing],
             date=[DateTime("2022-03-31T15:38:41"), DateTime("2022-03-31T15:38:41")]
         )
-        GDF.write("test_exotic.shp", t)
-        GDF.write("test_exotic.gpkg", t)
-        GDF.write("test_exotic.geojson", t)
-        tt = GDF.read("test_exotic.gpkg")
+        GDF.write(joinpath(testdatadir, "test_exotic.shp"), t)
+        GDF.write(joinpath(testdatadir, "test_exotic.gpkg"), t)
+        GDF.write(joinpath(testdatadir, "test_exotic.geojson"), t)
+        tt = GDF.read(joinpath(testdatadir, "test_exotic.gpkg"))
         @test AG.getx.(tt.geom, 0) == AG.getx.(t.geom, 0)
         @test tt.flag == t.flag
         @test tt.ex1 == t.ex1
@@ -120,9 +125,9 @@ end
     end
 
     @testset "Read shapefile with non-GDAL types" begin
-        GDF.read("test_exotic.shp")
-        GDF.read("test_exotic.gpkg")
-        GDF.read("test_exotic.geojson")
+        GDF.read(joinpath(testdatadir, "test_exotic.shp"))
+        GDF.read(joinpath(testdatadir, "test_exotic.gpkg"))
+        GDF.read(joinpath(testdatadir, "test_exotic.geojson"))
     end
 
     @testset "Spatial operations" begin
@@ -130,15 +135,15 @@ end
 
         # Buffer to also write polygons
         table.geom = AG.buffer(table.geom, 10)
-        GDF.write("test_polygons.shp", table)
-        GDF.write("test_polygons.gpkg", table)
-        GDF.write("test_polygons.geojson", table)
+        GDF.write(joinpath(testdatadir, "test_polygons.shp"), table)
+        GDF.write(joinpath(testdatadir, "test_polygons.gpkg"), table)
+        GDF.write(joinpath(testdatadir, "test_polygons.geojson"), table)
     end
 
     @testset "Reproject" begin
         table = DataFrame(geom=AG.createpoint.([[0, 0, 0]]), name="test")
         AG.reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
         @test GDF.AG.getpoint(table.geom[1], 0)[1] ≈ -587791.596556932
-        GDF.write("test_reprojection.gpkg", table, crs=GFT.EPSG(28992))
+        GDF.write(joinpath(testdatadir, "test_reprojection.gpkg"), table, crs=GFT.EPSG(28992))
     end
 end

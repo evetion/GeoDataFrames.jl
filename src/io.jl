@@ -22,12 +22,16 @@ function read(fn::AbstractString; kwargs...)
     if AG.nlayer(ds) > 1
         @warn "This file has multiple layers, you only get the first layer by default now."
     end
-    read(ds, 0)
+    t = read(ds, 0)
+    AG.destroy(ds)
+    return t
 end
 
 function read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
     ds = AG.read(fn; kwargs...)
-    read(ds, layer)
+    t = read(ds, layer)
+    AG.destroy(ds)
+    return t
 end
 
 function read(ds, layer)
@@ -36,8 +40,9 @@ function read(ds, layer)
         throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
     end
     df = DataFrame(table)
+    AG.destroy(table)
     "" in names(df) && rename!(df, Dict(Symbol("") => :geom,))  # needed for now
-    df
+    return df
 end
 
 """
