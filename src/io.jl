@@ -18,26 +18,31 @@ Read a file into a DataFrame. Any kwargs are passed onto ArchGDAL [here](https:/
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 """
 function read(fn::AbstractString; kwargs...)
-    ds = AG.read(fn; kwargs...)
-    if AG.nlayer(ds) > 1
-        @warn "This file has multiple layers, you only get the first layer by default now."
+    t = AG.read(fn; kwargs...) do ds
+        if AG.nlayer(ds) > 1
+            @warn "This file has multiple layers, you only get the first layer by default now."
+        end
+        return read(ds, 0)
     end
-    read(ds, 0)
+    return t
 end
 
 function read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
-    ds = AG.read(fn; kwargs...)
-    read(ds, layer)
+    t = AG.read(fn; kwargs...) do ds
+        return read(ds, layer)
+    end
+    return t
 end
 
 function read(ds, layer)
-    table = AG.getlayer(ds, layer)
-    if table.ptr == C_NULL
-        throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
+    df = AG.getlayer(ds, layer) do table
+        if table.ptr == C_NULL
+            throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
+        end
+        return DataFrame(table)
     end
-    df = DataFrame(table)
     "" in names(df) && rename!(df, Dict(Symbol("") => :geom,))  # needed for now
-    df
+    return df
 end
 
 """
@@ -80,32 +85,34 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
         fn,
         driver=driver
     ) do ds
-        spatialref = crs === nothing ? AG.SpatialRef() : AG.importCRS(crs)
-        AG.createlayer(
-            name=layer_name,
-            geom=geom_type,
-            spatialref=spatialref
-        ) do layer
-            for (name, type) in fields
-                AG.createfielddefn(String(name), convert(AG.OGRFieldType, type)) do fd
-                    AG.setsubtype!(fd, convert(AG.OGRFieldSubType, type))
-                    AG.addfielddefn!(layer, fd)
+        AG.newspatialref() do spatialref
+            crs !== nothing && AG.importCRS!(spatialref, crs)
+            AG.createlayer(
+                name=layer_name,
+                geom=geom_type,
+                spatialref=spatialref
+            ) do layer
+                for (name, type) in fields
+                    AG.createfielddefn(String(name), convert(AG.OGRFieldType, type)) do fd
+                        AG.setsubtype!(fd, convert(AG.OGRFieldSubType, type))
+                        AG.addfielddefn!(layer, fd)
+                    end
                 end
-            end
-            for row in rows
-                AG.createfeature(layer) do feature
-                    AG.setgeom!(feature, getproperty(row, geom_column))
-                    for (name, _) in fields
-                        field = getproperty(row, name)
-                        if !ismissing(field)
-                            AG.setfield!(feature, AG.findfieldindex(feature, name), getproperty(row, name))
-                        else
-                            AG.GDAL.ogr_f_setfieldnull(feature.ptr, AG.findfieldindex(feature, name))
+                for row in rows
+                    AG.createfeature(layer) do feature
+                        AG.setgeom!(feature, getproperty(row, geom_column))
+                        for (name, _) in fields
+                            field = getproperty(row, name)
+                            if !ismissing(field)
+                                AG.setfield!(feature, AG.findfieldindex(feature, name), getproperty(row, name))
+                            else
+                                AG.GDAL.ogr_f_setfieldnull(feature.ptr, AG.findfieldindex(feature, name))
+                            end
                         end
                     end
                 end
+                AG.copy(layer, dataset=ds, name=layer_name)
             end
-            AG.copy(layer, dataset=ds, name=layer_name)
         end
     end
     fn
