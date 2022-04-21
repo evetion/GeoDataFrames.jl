@@ -15,7 +15,6 @@ Some basic examples without explanation follow here, for a complete overview, pl
 
 # Usage
 There's no special type here. You just use normal `DataFrame`s with a `Vector` of ArchGDAL geometries as a column.
-Other backing geometries implementing the traits based GeoInterface are supported as well.
 
 ## Reading
 ```julia
@@ -65,7 +64,8 @@ GDF.write("test_points.shp", df; layer_name="data", geom_column=:geom, crs=GFT.E
 ```
 
 ## Operations
-The supported operations are the [GeoInterface](https://github.com/JuliaGeo/GeoInterface.jl/) operations that are exported again to work on Vectors of geometries as well. Depending on the backing geometry type, you can apply all [ArchGDAL operations](https://yeesian.com/ArchGDAL.jl/stable/geometries/) on ArchGDAL geometries yourself as well.
+The supported operations are the ArchGDAL operations that are exported again to work on Vectors of geometries as well.
+Hence, if you can apply all the [ArchGDAL operations](https://yeesian.com/ArchGDAL.jl/stable/geometries/) yourself.
 
 ```julia
 df.geom = buffer(df.geom, 10);  # points turn into polygons
