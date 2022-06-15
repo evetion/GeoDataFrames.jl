@@ -7,5 +7,6 @@ import GeoFormatTypes as GFT
 
 include("exports.jl")
 include("io.jl")
+include("utils.jl")
 
 end  # module

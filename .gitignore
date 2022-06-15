@@ -9,3 +9,4 @@ docs/src/*.png
 *.sbn
 *.sbx
 *.sha256
+.DS_Store

@@ -10,6 +10,18 @@ const drivermapping = Dict(
     ".nc" => "netCDF",
 )
 
+const lookup_type = Dict{DataType,AG.OGRwkbGeometryType}(
+    AG.GeoInterface.PointTrait => AG.wkbPoint,
+    AG.GeoInterface.MultiPointTrait => AG.wkbMultiPoint,
+    AG.GeoInterface.LineStringTrait => AG.wkbLineString,
+    AG.GeoInterface.LinearRingTrait => AG.wkbMultiLineString,
+    AG.GeoInterface.MultiLineStringTrait => AG.wkbMultiLineString,
+    AG.GeoInterface.PolygonTrait => AG.wkbPolygon,
+    AG.GeoInterface.MultiPolygonTrait => AG.wkbMultiPolygon,
+)
+
+
+
 """
     read(fn::AbstractString; kwargs...)
     read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
@@ -46,16 +58,25 @@ function read(ds, layer)
 end
 
 """
-    write(fn::AbstractString, table; layer_name="data", geom_column=:geom, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing)
+    write(fn::AbstractString, table; layer_name="data", geom_column=:geom, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geom))
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function write(fn::AbstractString, table; layer_name::AbstractString="data", geom_column::Symbol=:geom, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing)
+function write(fn::AbstractString, table; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns::Set{Symbol}=Set{Symbol}((:geom,)), kwargs...)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
-    # Geom type can't be inferred from here
-    geom_type = AG.getgeomtype(rows[1][geom_column])
+    # Determine geometry columns
+    if :geom_column in keys(kwargs)
+        geom_columns = Set((kwargs[:geom_column],))
+    end
+    geom_types = []
+    for geom_column in geom_columns
+        trait = AG.GeoInterface.geomtrait(rows[1][geom_column])
+        geom_type = get(lookup_type, typeof(trait), nothing)
+        isnothing(geom_type) && throw(ArgumentError("Can't convert $trait of column $geom_column to ArchGDAL yet."))
+        push!(geom_types, geom_type)
+    end
 
     # Find driver
     _, extension = splitext(fn)
@@ -70,14 +91,15 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
     # Figure out attributes
     fields = Vector{Tuple{Symbol,DataType}}()
     for (name, type) in zip(sch.names, sch.types)
-        if type != AG.IGeometry && name != geom_column
+        if !(name in geom_columns)
+            AG.GeoInterface.isgeometry(type) && error("Did you mean to use the `geom_columns` argument to specify $name is a geometry?")
             types = Base.uniontypes(type)
             if length(types) == 1
                 push!(fields, (Symbol(name), type))
             elseif length(types) == 2 && Missing in types
                 push!(fields, (Symbol(name), types[2]))
             else
-                error("Can't convert to GDAL type from $type")
+                error("Can't convert to GDAL type from $type. Please file an issue.")
             end
         end
     end
@@ -89,9 +111,15 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
             crs !== nothing && AG.importCRS!(spatialref, crs)
             AG.createlayer(
                 name=layer_name,
-                geom=geom_type,
-                spatialref=spatialref
+                geom=first(geom_types),
+                spatialref=spatialref,
+                options=stringlist(options)
             ) do layer
+                for (i, (geom_column, geom_type)) in enumerate(zip(geom_columns, geom_types))
+                    if i > 1
+                        AG.writegeomdefn!(layer, string(geom_column), geom_type)
+                    end
+                end
                 for (name, type) in fields
                     AG.createfielddefn(String(name), convert(AG.OGRFieldType, type)) do fd
                         AG.setsubtype!(fd, convert(AG.OGRFieldSubType, type))
@@ -100,7 +128,9 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
                 end
                 for row in rows
                     AG.createfeature(layer) do feature
-                        AG.setgeom!(feature, getproperty(row, geom_column))
+                        for (i, (geom_column)) in enumerate(geom_columns)
+                            AG.setgeom!(feature, i - 1, convert(AG.IGeometry, getproperty(row, geom_column)))
+                        end
                         for (name, _) in fields
                             field = getproperty(row, name)
                             if !ismissing(field)
@@ -111,7 +141,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", geo
                         end
                     end
                 end
-                AG.copy(layer, dataset=ds, name=layer_name)
+                AG.copy(layer, dataset=ds, name=layer_name, options=stringlist(options))
             end
         end
     end

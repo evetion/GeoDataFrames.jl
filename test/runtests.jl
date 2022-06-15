@@ -1,9 +1,9 @@
+import GeoDataFrames as GDF
 using DataFrames
 using Dates
 using Pkg.PlatformEngines
 using Test
 import ArchGDAL as AG
-import GeoDataFrames as GDF
 import GeoFormatTypes as GFT
 
 # Use ArchGDAL datasets to test with
@@ -66,8 +66,8 @@ end
         # Save table with a few random points
         table = DataFrame(geom=AG.createpoint.(coords), name="test")
         GDF.write(joinpath(testdatadir, "test_points.shp"), table)
-        GDF.write(joinpath(testdatadir, "test_points.gpkg"), table, layer_name="test_points")
-        GDF.write(joinpath(testdatadir, "test_points.geojson"), table, layer_name="test_points")
+        GDF.write(joinpath(testdatadir, "test_points.gpkg"), table; layer_name="test_points")
+        GDF.write(joinpath(testdatadir, "test_points.geojson"), table; layer_name="test_points")
 
         ntable = GDF.read(joinpath(testdatadir, "test_points.shp"))
         @test nrow(ntable) == 10
@@ -82,9 +82,9 @@ end
         t = GDF.read(fn)
 
         # Save table from reading
-        GDF.write(joinpath(testdatadir, "test_read.shp"), t, layer_name="test_coastline")
-        GDF.write(joinpath(testdatadir, "test_read.gpkg"), t, layer_name="test_coastline")
-        GDF.write(joinpath(testdatadir, "test_read.geojson"), t, layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.shp"), t; layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.gpkg"), t; layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.geojson"), t; layer_name="test_coastline")
 
     end
 
@@ -139,8 +139,22 @@ end
         table = DataFrame(geom=AG.createpoint.([[0, 0, 0]]), name="test")
         AG.reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
         @test GDF.AG.getpoint(table.geom[1], 0)[1] ≈ -587791.596556932
-        GDF.write(joinpath(testdatadir, "test_reprojection.gpkg"), table, crs=GFT.EPSG(28992))
+        GDF.write(joinpath(testdatadir, "test_reprojection.gpkg"), table; crs=GFT.EPSG(28992))
     end
 
+    @testset "Kwargs" begin
+        table = DataFrame(foo=AG.createpoint.([[0, 0, 0]]), name="test")
+        GDF.write(joinpath(testdatadir, "test_options1.gpkg"), table; geom_column=:foo)
+        GDF.write(joinpath(testdatadir, "test_options2.gpkg"), table; geom_columns=Set((:foo,)))
+
+        table = DataFrame(foo=AG.createpoint.([[0, 0, 0]]), bar=AG.createpoint.([[0, 0, 0]]), name="test")
+        @test_throws Exception GDF.write(joinpath(testdatadir, "test_options3.gpkg"), table; geom_column=:foo)
+        GDF.write(joinpath(testdatadir, "test_options3.gpkg"), table; geom_columns=Set((:foo, :bar)))
+
+        table = DataFrame(foo=AG.createpoint.([[0, 0, 0]]), name="test")
+        GDF.write(joinpath(testdatadir, "test_options4.gpkg"), table; options=Dict(
+                "GEOMETRY_NAME" => "bar", "DESCRIPTION" => "Written by GeoDataFrames.jl"), geom_column=:foo)
+
+    end
 
 end
