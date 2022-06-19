@@ -21,7 +21,6 @@ const lookup_type = Dict{DataType,AG.OGRwkbGeometryType}(
 )
 
 
-
 """
     read(fn::AbstractString; kwargs...)
     read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
@@ -53,26 +52,26 @@ function read(ds, layer)
         end
         return DataFrame(table)
     end
-    "" in names(df) && rename!(df, Dict(Symbol("") => :geom,))  # needed for now
+    "" in names(df) && rename!(df, Dict(Symbol("") => :geometry,))  # needed for now
     return df
 end
 
 """
-    write(fn::AbstractString, table; layer_name="data", geom_column=:geom, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geom))
+    write(fn::AbstractString, table; layer_name="data", geom_column=:geometry, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function write(fn::AbstractString, table; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns::Set{Symbol}=Set{Symbol}((:geom,)), kwargs...)
+function write(fn::AbstractString, table; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=GeoInterface.geometrycolumns(table), kwargs...)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
     # Determine geometry columns
-    if :geom_column in keys(kwargs)
-        geom_columns = Set((kwargs[:geom_column],))
+    if :geom_column in keys(kwargs)  # backwards compatible
+        geom_columns = (kwargs[:geom_column],)
     end
     geom_types = []
     for geom_column in geom_columns
-        trait = AG.GeoInterface.geomtrait(rows[1][geom_column])
+        trait = AG.GeoInterface.geomtrait(getproperty(first(rows), geom_column))
         geom_type = get(lookup_type, typeof(trait), nothing)
         isnothing(geom_type) && throw(ArgumentError("Can't convert $trait of column $geom_column to ArchGDAL yet."))
         push!(geom_types, geom_type)
@@ -111,7 +110,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
             crs !== nothing && AG.importCRS!(spatialref, crs)
             AG.createlayer(
                 name=layer_name,
-                geom=first(geom_types),
+                geom=first(geom_types),  # how to set the name though?
                 spatialref=spatialref,
                 options=stringlist(options)
             ) do layer
