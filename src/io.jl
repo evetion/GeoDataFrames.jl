@@ -69,12 +69,18 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
     if :geom_column in keys(kwargs)  # backwards compatible
         geom_columns = (kwargs[:geom_column],)
     end
+
     geom_types = []
     for geom_column in geom_columns
         trait = AG.GeoInterface.geomtrait(getproperty(first(rows), geom_column))
         geom_type = get(lookup_type, typeof(trait), nothing)
         isnothing(geom_type) && throw(ArgumentError("Can't convert $trait of column $geom_column to ArchGDAL yet."))
         push!(geom_types, geom_type)
+    end
+
+    # Set geometry name in options
+    if !("geometry_name" in keys(options))
+        options["geometry_name"] = "geometry"
     end
 
     # Find driver

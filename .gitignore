@@ -10,3 +10,4 @@ docs/src/*.png
 *.sbx
 *.sha256
 .DS_Store
+Manifest.toml
