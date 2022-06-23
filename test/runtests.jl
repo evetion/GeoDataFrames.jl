@@ -1,10 +1,11 @@
+import GeoDataFrames as GDF
 using DataFrames
 using Dates
 using Pkg.PlatformEngines
 using Test
 import ArchGDAL as AG
-import GeoDataFrames as GDF
 import GeoFormatTypes as GFT
+import GeoInterface as GI
 
 # Use ArchGDAL datasets to test with
 const testdatadir = joinpath(@__DIR__, "data")
@@ -64,10 +65,10 @@ end
 
     @testset "Read self written file" begin
         # Save table with a few random points
-        table = DataFrame(geom=AG.createpoint.(coords), name="test")
+        table = DataFrame(geometry=AG.createpoint.(coords), name="test")
         GDF.write(joinpath(testdatadir, "test_points.shp"), table)
-        GDF.write(joinpath(testdatadir, "test_points.gpkg"), table, layer_name="test_points")
-        GDF.write(joinpath(testdatadir, "test_points.geojson"), table, layer_name="test_points")
+        GDF.write(joinpath(testdatadir, "test_points.gpkg"), table; layer_name="test_points")
+        GDF.write(joinpath(testdatadir, "test_points.geojson"), table; layer_name="test_points")
 
         ntable = GDF.read(joinpath(testdatadir, "test_points.shp"))
         @test nrow(ntable) == 10
@@ -78,20 +79,19 @@ end
     end
 
     @testset "Write shapefile" begin
-
         t = GDF.read(fn)
 
         # Save table from reading
-        GDF.write(joinpath(testdatadir, "test_read.shp"), t, layer_name="test_coastline")
-        GDF.write(joinpath(testdatadir, "test_read.gpkg"), t, layer_name="test_coastline")
-        GDF.write(joinpath(testdatadir, "test_read.geojson"), t, layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.shp"), t; layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.gpkg"), t; layer_name="test_coastline")
+        GDF.write(joinpath(testdatadir, "test_read.geojson"), t; layer_name="test_coastline")
 
     end
 
     @testset "Write shapefile with non-GDAL types" begin
         coords = collect(zip(rand(Float32, 2), rand(Float32, 2)))
         t = DataFrame(
-            geom=AG.createpoint.(coords),
+            geometry=AG.createpoint.(coords),
             name=["test", "test2"],
             flag=UInt8[typemin(UInt8), typemax(UInt8)],
             ex1=Int16[typemin(Int8), typemax(Int8)],
@@ -107,7 +107,7 @@ end
         GDF.write(joinpath(testdatadir, "test_exotic.gpkg"), t)
         GDF.write(joinpath(testdatadir, "test_exotic.geojson"), t)
         tt = GDF.read(joinpath(testdatadir, "test_exotic.gpkg"))
-        @test AG.getx.(tt.geom, 0) == AG.getx.(t.geom, 0)
+        @test AG.getx.(tt.geometry, 0) == AG.getx.(t.geometry, 0)
         @test tt.flag == t.flag
         @test tt.ex1 == t.ex1
         @test tt.ex2 == t.ex2
@@ -126,21 +126,43 @@ end
     end
 
     @testset "Spatial operations" begin
-        table = DataFrame(geom=AG.createpoint.(coords), name="test")
+        table = DataFrame(geometry=AG.createpoint.(coords), name="test")
 
         # Buffer to also write polygons
-        table.geom = AG.buffer(table.geom, 10)
+        table.geometry = AG.buffer(table.geometry, 10)
         GDF.write(joinpath(testdatadir, "test_polygons.shp"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.gpkg"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.geojson"), table)
     end
 
     @testset "Reproject" begin
-        table = DataFrame(geom=AG.createpoint.([[0, 0, 0]]), name="test")
-        AG.reproject(table.geom, GFT.EPSG(4326), GFT.EPSG(28992))
-        @test GDF.AG.getpoint(table.geom[1], 0)[1] ≈ -587791.596556932
-        GDF.write(joinpath(testdatadir, "test_reprojection.gpkg"), table, crs=GFT.EPSG(28992))
+        table = DataFrame(geometry=AG.createpoint.([[0, 0, 0]]), name="test")
+        AG.reproject(table.geometry, GFT.EPSG(4326), GFT.EPSG(28992))
+        @test GDF.AG.getpoint(table.geometry[1], 0)[1] ≈ -587791.596556932
+        GDF.write(joinpath(testdatadir, "test_reprojection.gpkg"), table; crs=GFT.EPSG(28992))
     end
 
+    @testset "Kwargs" begin
+        table = DataFrame(foo=AG.createpoint.([[0, 0, 0]]), name="test")
+        GDF.write(joinpath(testdatadir, "test_options1.gpkg"), table; geom_column=:foo)
+        GDF.write(joinpath(testdatadir, "test_options2.gpkg"), table; geom_columns=Set((:foo,)))
+
+        table = DataFrame(foo=AG.createpoint.([[0, 0, 0]]), bar=AG.createpoint.([[0, 0, 0]]), name="test")
+        @test_throws Exception GDF.write(joinpath(testdatadir, "test_options3.gpkg"), table; geom_column=:foo)
+        GDF.write(joinpath(testdatadir, "test_options3.gpkg"), table; geom_columns=Set((:foo, :bar)))
+
+        table = DataFrame(foo=AG.createpoint.([[0, 0, 0]]), name="test")
+        GDF.write(joinpath(testdatadir, "test_options4.gpkg"), table; options=Dict(
+                "GEOMETRY_NAME" => "bar", "DESCRIPTION" => "Written by GeoDataFrames.jl"), geom_column=:foo)
+
+    end
+
+    @testset "GeoInterface" begin
+        tfn = joinpath(testdatadir, "test_geointerface.gpkg")
+        table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
+        @test_throws Exception GDF.write(tfn, table)
+        GI.geometrycolumns(::Vector{<:NamedTuple}) = (:geom,)
+        @test isfile(GDF.write(tfn, table))
+    end
 
 end
