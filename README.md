@@ -57,10 +57,18 @@ df = DataFrame(geom=createpoint.(coords), name="test");
 GDF.write("test_points.shp", df)
 ```
 
-You can also set options such as the layername or crs.
+You can also set options such as the layer_name, coordinate reference system, the [driver](https://gdal.org/drivers/vector/) and its options:
 ```julia
 import GeoFormatTypes as GFT
-GDF.write("test_points.shp", df; layer_name="data", geom_column=:geom, crs=GFT.EPSG(4326))
+GDF.write("test_points.shp", df; layer_name="data", crs=GFT.EPSG(4326), driver="FlatGeoBuf", options=Dict("SPATIAL_INDEX"=>"YES"))
+```
+
+Note that any Tables.jl compatible table with GeoInterface.jl compatible geometries can be written by GeoDataFrames. You might want
+to pass which column(s) contain geometries, or by defining `GeoInterface.geometrycolumns` on your table. Multiple geometry columns,
+when enabled by the driver, can be provided in this way.
+```julia
+table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
+GDF.write(tfn, table; geom_columns=(:geom),)
 ```
 
 ## Operations
