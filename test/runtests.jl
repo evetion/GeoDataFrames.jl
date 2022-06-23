@@ -160,7 +160,8 @@ end
     @testset "GeoInterface" begin
         tfn = joinpath(testdatadir, "test_geointerface.gpkg")
         table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
-        GI.geometrycolumns(table) = (:geom,)
+        @test_throws Exception GDF.write(tfn, table)
+        GI.geometrycolumns(::Vector{<:NamedTuple}) = (:geom,)
         @test isfile(GDF.write(tfn, table))
     end
 

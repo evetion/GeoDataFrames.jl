@@ -66,6 +66,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
     sch = Tables.schema(rows)
 
     # Determine geometry columns
+    isnothing(geom_columns) && error("Please set `geom_columns` or define `GeoInterface.geometrycolumns` for $(typeof(table))")
     if :geom_column in keys(kwargs)  # backwards compatible
         geom_columns = (kwargs[:geom_column],)
     end
