@@ -53,6 +53,13 @@ AG.transform!(v::Vector{AG.IGeometry{T}}, d) where {T} = AG.buffer.(v, d)
 AG.geomlength(v::Vector{AG.IGeometry{T}}) where {T} = AG.geomlength.(v)
 AG.geomarea(v::Vector{AG.IGeometry{T}}) where {T} = AG.geomarea.(v)
 AG.centroid(v::Vector{AG.IGeometry{T}}) where {T} = AG.centroid.(v)
+AG.getx(v::Vector{AG.IGeometry{T}}, i::I) where {T, I} = AG.getx.(v, i)
+AG.gety(v::Vector{AG.IGeometry{T}}, i::I) where {T, I} = AG.gety.(v, i)
+
+getx(df::DataFrame) = AG.getx(AG.centroid.(df.geometry), 0)
+gety(df::DataFrame) = AG.gety(AG.centroid.(df.geometry), 0)
+centroids(df::DataFrame) = collect(zip(getx(df), gety(df)))
+
 AG.isempty(v::Vector{AG.IGeometry{T}}) where {T} = AG.isempty.(v)
 AG.isvalid(v::Vector{AG.IGeometry{T}}) where {T} = AG.isvalid.(v)
 AG.issimple(v::Vector{AG.IGeometry{T}}) where {T} = AG.issimple.(v)
