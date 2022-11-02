@@ -38,6 +38,11 @@ end
         @test "ID" in names(t)
     end
 
+    @testset "Read non-existent shapefile" begin
+        fne = "/bla.shp"
+        @test_throws ErrorException("File not found.") GDF.read(fne)
+    end
+
     @testset "Read shapefile with layer id" begin
         t = GDF.read(fn, 0)
         @test nrow(t) == 42
