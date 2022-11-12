@@ -40,6 +40,7 @@ function read(fn::AbstractString; kwargs...)
 end
 
 function read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
+    startswith(fn, "/vsi") || occursin(":", fn) || isfile(fn) || error("File not found.")
     t = AG.read(fn; kwargs...) do ds
         return read(ds, layer)
     end
@@ -47,27 +48,34 @@ function read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs..
 end
 
 function read(ds, layer)
-    df = AG.getlayer(ds, layer) do table
+    df, gnames = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
         end
-        return DataFrame(table)
+        names, _ = AG.schema_names(AG.getfeaturedefn(first(table)))
+        return DataFrame(table), names
     end
-    "" in names(df) && rename!(df, Dict(Symbol("") => :geometry,))  # needed for now
+    if "" in names(df)
+        rename!(df, Symbol("") => :geometry)
+        replace!(gnames, Symbol("") => :geometry)
+    end
+    proj = AG.getproj(ds)
+    metadata!(df, "crs", proj == "" ? nothing : GFT.WellKnownText(GFT.CRS(), proj), style=:default)
+    metadata!(df, "geometrycolumns", Tuple(gnames), style=:default)
     return df
 end
 
 """
-    write(fn::AbstractString, table; layer_name="data", geom_column=:geometry, crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
+    write(fn::AbstractString, table; layer_name="data", geom_column=:geometry, crs::Union{GFT.GeoFormat,Nothing}=crs(table), driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
-function write(fn::AbstractString, table; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=nothing, driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=GeoInterface.geometrycolumns(table), kwargs...)
+function write(fn::AbstractString, table; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=getcrs(table), driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=getgeometrycolumns(table), kwargs...)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
     # Determine geometry columns
-    isnothing(geom_columns) && error("Please set `geom_columns` or define `GeoInterface.geometrycolumns` for $(typeof(table))")
+    isnothing(geom_columns) && error("Please set `geom_columns` kw or define `GeoInterface.geometrycolumns` for $(typeof(table))")
     if :geom_column in keys(kwargs)  # backwards compatible
         geom_columns = (kwargs[:geom_column],)
     end

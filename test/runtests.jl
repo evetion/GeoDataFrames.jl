@@ -166,6 +166,10 @@ end
         tfn = joinpath(testdatadir, "test_geointerface.gpkg")
         table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
         @test_throws Exception GDF.write(tfn, table)
+        GI.isfeaturecollection(::Vector{<:NamedTuple}) = true
+        GI.geomtrait(::Vector{<:NamedTuple}) = GI.FeatureCollectionTrait()
+        GI.crs(::GI.FeatureCollectionTrait, ::Vector{<:NamedTuple}) = nothing
+        GI.isfeaturecollection(::Vector{<:NamedTuple}) = true
         GI.geometrycolumns(::Vector{<:NamedTuple}) = (:geom,)
         @test isfile(GDF.write(tfn, table))
     end
