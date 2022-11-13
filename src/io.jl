@@ -66,7 +66,7 @@ function read(ds, layer)
 end
 
 """
-    write(fn::AbstractString, table; layer_name="data", geom_column=:geometry, crs::Union{GFT.GeoFormat,Nothing}=crs(table), driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
+    write(fn::AbstractString, table; layer_name="data", crs::Union{GFT.GeoFormat,Nothing}=crs(table), driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
@@ -90,7 +90,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
 
     # Set geometry name in options
     if !("geometry_name" in keys(options))
-        options["geometry_name"] = "geometry"
+        options["geometry_name"] = String(first(geom_columns))
     end
 
     # Find driver
