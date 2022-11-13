@@ -5,6 +5,7 @@ using DataFrames
 using Tables
 import GeoFormatTypes as GFT
 import GeoInterface
+using DataAPI
 
 include("exports.jl")
 include("io.jl")

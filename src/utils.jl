@@ -5,3 +5,23 @@ function stringlist(dict::Dict{String,String})
     end
     return sv
 end
+
+function getgeometrycolumns(table)
+    if GeoInterface.isfeaturecollection(table)
+        return GeoInterface.geometrycolumns(table)
+    elseif first(DataAPI.metadatasupport(typeof(table)))
+        return metadata(table, "geometrycolumns", (:geometry,))
+    else
+        return (:geometry,)
+    end
+end
+
+function getcrs(table)
+    if GeoInterface.isfeaturecollection(table)
+        return GeoInterface.crs(table)
+    elseif first(DataAPI.metadatasupport(typeof(table)))
+        return metadata(table, "crs", nothing)
+    else
+        return nothing
+    end
+end
