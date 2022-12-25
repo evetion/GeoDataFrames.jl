@@ -21,7 +21,7 @@ There's no special type here. You just use normal `DataFrame`s with a `Vector` o
 import GeoDataFrames as GDF
 df = GDF.read("test_points.shp")
 10×2 DataFrame
- Row │ geom                name
+ Row │ geometry            name
      │ IGeometr…           String
 ─────┼────────────────────────────
    1 │ Geometry: wkbPoint  test
@@ -53,7 +53,7 @@ GDF.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM
 using DataFrames
 
 coords = zip(rand(10), rand(10))
-df = DataFrame(geom=createpoint.(coords), name="test");
+df = DataFrame(geometry=createpoint.(coords), name="test");
 GDF.write("test_points.shp", df)
 ```
 
@@ -68,7 +68,7 @@ to pass which column(s) contain geometries, or by defining `GeoInterface.geometr
 when enabled by the driver, can be provided in this way.
 ```julia
 table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
-GDF.write(tfn, table; geom_columns=(:geom),)
+GDF.write(tfn, table; geom_columns=(:geom,),)
 ```
 
 ## Operations
@@ -79,7 +79,7 @@ Hence, if you can apply all the [ArchGDAL operations](https://yeesian.com/ArchGD
 df.geom = buffer(df.geom, 10);  # points turn into polygons
 df
 10×2 DataFrame
- Row │ geom                  name
+ Row │ geometry              name
      │ IGeometr…             String
 ─────┼──────────────────────────────
    1 │ Geometry: wkbPolygon  test
@@ -97,7 +97,7 @@ df
 ### Reprojection
 ```julia
 import GeoFormatTypes as GFT
-df.geom = reproject(df.geom, GFT.EPSG(4326), GFT.EPSG(28992))
+df.geometry = reproject(df.geometry, GFT.EPSG(4326), GFT.EPSG(28992))
 10-element Vector{ArchGDAL.IGeometry{ArchGDAL.wkbPolygon}}:
  Geometry: POLYGON ((-472026.042542408 -4406233.59953401,-537 ... 401))
  Geometry: POLYGON ((-417143.506054105 -4395423.99277048,-482 ... 048))
@@ -114,7 +114,7 @@ df.geom = reproject(df.geom, GFT.EPSG(4326), GFT.EPSG(28992))
 ## Plotting
 ```julia
 using Plots
-plot(df.geom)
+plot(df.geometry)
 ```
 ![image](img/plot_points.png)
 
