@@ -117,6 +117,3 @@ using Plots
 plot(df.geometry)
 ```
 ![image](img/plot_points.png)
-
-## Credit
-We thank Julia Computing for supporting contributions to this package.
