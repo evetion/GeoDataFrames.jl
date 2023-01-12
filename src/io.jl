@@ -144,7 +144,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
                 for row in rows
                     AG.createfeature(layer) do feature
                         for (i, (geom_column)) in enumerate(geom_columns)
-                            AG.setgeom!(feature, i - 1, convert(AG.IGeometry, getproperty(row, geom_column)))
+                            AG.setgeom!(feature, i - 1, GeoInterface.convert(AG.IGeometry, getproperty(row, geom_column)))
                         end
                         for (name, _) in fields
                             field = getproperty(row, name)
