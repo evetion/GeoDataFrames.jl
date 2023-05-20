@@ -4,6 +4,7 @@ const drivermapping = Dict(
     ".gpkg" => "GPKG",
     ".geojson" => "GeoJSON",
     ".vrt" => "VRT",
+    ".sqlite" => "SQLite",
     ".csv" => "CSV",
     ".fgb" => "FlatGeobuf",
     ".gml" => "GML",
