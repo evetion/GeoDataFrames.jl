@@ -49,6 +49,13 @@ end
         @test "ID" in names(t)
     end
 
+    @testset "Drivers" begin
+        t = GDF.read(fn, 0)
+        GDF.write(joinpath(testdatadir, "test.csv"), t)
+        GDF.write(joinpath(testdatadir, "test.arrow"), t)
+        GDF.write(joinpath(testdatadir, "test.pdf"), t)
+    end
+
     @testset "Read shapefile with layer name" begin
         t = GDF.read(fn, "sites")
         @test nrow(t) == 42

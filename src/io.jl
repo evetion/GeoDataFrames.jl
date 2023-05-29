@@ -7,9 +7,19 @@ const drivermapping = Dict(
     ".sqlite" => "SQLite",
     ".csv" => "CSV",
     ".fgb" => "FlatGeobuf",
+    ".pq" => "Parquet",
+    ".arrow" => "Arrow",
     ".gml" => "GML",
     ".nc" => "netCDF",
 )
+
+function find_driver(fn::AbstractString)
+    _, ext = splitext(fn)
+    if ext in keys(drivermapping)
+        return drivermapping[ext]
+    end
+    AG.extensiondriver(fn)
+end
 
 const lookup_type = Dict{DataType,AG.OGRwkbGeometryType}(
     AG.GeoInterface.PointTrait => AG.wkbPoint,
@@ -95,13 +105,10 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
     end
 
     # Find driver
-    _, extension = splitext(fn)
     if driver !== nothing
         driver = AG.getdriver(driver)
-    elseif extension in keys(drivermapping)
-        driver = AG.getdriver(drivermapping[extension])
     else
-        error("Couldn't determine driver for $extension. Please provide one of $(keys(drivermapping))")
+        driver = AG.getdriver(find_driver(fn))
     end
 
     # Figure out attributes
