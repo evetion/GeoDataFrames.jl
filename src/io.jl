@@ -21,14 +21,25 @@ function find_driver(fn::AbstractString)
     AG.extensiondriver(fn)
 end
 
-const lookup_type = Dict{DataType,AG.OGRwkbGeometryType}(
-    AG.GeoInterface.PointTrait => AG.wkbPoint,
-    AG.GeoInterface.MultiPointTrait => AG.wkbMultiPoint,
-    AG.GeoInterface.LineStringTrait => AG.wkbLineString,
-    AG.GeoInterface.LinearRingTrait => AG.wkbMultiLineString,
-    AG.GeoInterface.MultiLineStringTrait => AG.wkbMultiLineString,
-    AG.GeoInterface.PolygonTrait => AG.wkbPolygon,
-    AG.GeoInterface.MultiPolygonTrait => AG.wkbMultiPolygon,
+const lookup_type = Dict{Tuple{DataType,Int},AG.OGRwkbGeometryType}(
+    (AG.GeoInterface.PointTrait, 2) => AG.wkbPoint,
+    (AG.GeoInterface.PointTrait, 3) => AG.wkbPoint25D,
+    (AG.GeoInterface.PointTrait, 4) => AG.wkbPointZM,
+    (AG.GeoInterface.MultiPointTrait, 2) => AG.wkbMultiPoint,
+    (AG.GeoInterface.MultiPointTrait, 3) => AG.wkbMultiPoint25D,
+    (AG.GeoInterface.MultiPointTrait, 4) => AG.wkbMultiPointZM,
+    (AG.GeoInterface.LineStringTrait, 2) => AG.wkbLineString,
+    (AG.GeoInterface.LineStringTrait, 3) => AG.wkbLineString25D,
+    (AG.GeoInterface.LineStringTrait, 4) => AG.wkbLineStringZM,
+    (AG.GeoInterface.MultiLineStringTrait, 2) => AG.wkbMultiLineString,
+    (AG.GeoInterface.MultiLineStringTrait, 3) => AG.wkbMultiLineString25D,
+    (AG.GeoInterface.MultiLineStringTrait, 4) => AG.wkbMultiLineStringZM,
+    (AG.GeoInterface.PolygonTrait, 2) => AG.wkbPolygon,
+    (AG.GeoInterface.PolygonTrait, 3) => AG.wkbPolygon25D,
+    (AG.GeoInterface.PolygonTrait, 4) => AG.wkbPolygonZM,
+    (AG.GeoInterface.MultiPolygonTrait, 2) => AG.wkbMultiPolygon,
+    (AG.GeoInterface.MultiPolygonTrait, 3) => AG.wkbMultiPolygon25D,
+    (AG.GeoInterface.MultiPolygonTrait, 4) => AG.wkbMultiPolygonZM,
 )
 
 
@@ -94,8 +105,9 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
     geom_types = []
     for geom_column in geom_columns
         trait = AG.GeoInterface.geomtrait(getproperty(first(rows), geom_column))
-        geom_type = get(lookup_type, typeof(trait), nothing)
-        isnothing(geom_type) && throw(ArgumentError("Can't convert $trait of column $geom_column to ArchGDAL yet."))
+        ndim = AG.GeoInterface.ncoord(getproperty(first(rows), geom_column))
+        geom_type = get(lookup_type, (typeof(trait), ndim), nothing)
+        isnothing(geom_type) && throw(ArgumentError("Can't convert $trait with $ndim dimensions of column $geom_column to ArchGDAL yet."))
         push!(geom_types, geom_type)
     end
 

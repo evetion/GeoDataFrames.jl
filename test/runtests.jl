@@ -31,6 +31,7 @@ end
 @testset "GeoDataFrames.jl" begin
     fn = joinpath(testdatadir, "sites.shp")
     coords = zip(rand(10), rand(10))
+    coords3 = zip(rand(10), rand(10), rand(10))
 
     @testset "Read shapefile" begin
         t = GDF.read(fn)
@@ -88,6 +89,11 @@ end
         @test nrow(ntable) == 10
         ntable = GDF.read(joinpath(testdatadir, "test_points.geojson"))
         @test nrow(ntable) == 10
+
+        tablez = DataFrame(geometry=AG.createpoint.(coords3), name="test")
+        GDF.write(joinpath(testdatadir, "test_pointsz.gpkg"), tablez; layer_name="test_points")
+        ntable = GDF.read(joinpath(testdatadir, "test_pointsz.gpkg"))
+        @test GI.ncoord(ntable.geometry[1]) == 3
     end
 
     @testset "Write shapefile" begin
