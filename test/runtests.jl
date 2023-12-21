@@ -27,6 +27,7 @@ for (f, sha) in remotefiles
     PlatformEngines.download_verify(url, sha, localfn; force=true)
 end
 
+unknown_crs = GFT.WellKnownText(GFT.CRS(), "GEOGCS[\"Undefined geographic SRS\",DATUM[\"unknown\",SPHEROID[\"unknown\",6378137,298.257223563]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST]]")
 
 @testset "GeoDataFrames.jl" begin
     fn = joinpath(testdatadir, "sites.shp")
@@ -191,13 +192,13 @@ end
         tfn = joinpath(testdatadir, "test_meta.gpkg")
         table = DataFrame(bar=AG.createpoint(1.0, 2.0), name="test")
         @test_throws Exception GDF.write(tfn, table)
-
-        meta = Dict("crs" => nothing, "geometrycolumns" => (:bar,))
+        meta = Dict{String,Any}("crs" => nothing, "geometrycolumns" => (:bar,))
         for pair in meta
             metadata!(table, pair.first, pair.second, style=:default)
         end
         @test isfile(GDF.write(tfn, table))
         t = GDF.read(tfn)
+        meta["crs"] = unknown_crs
         @test metadata(t) == meta
     end
 

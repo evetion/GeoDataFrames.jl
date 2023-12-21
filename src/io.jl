@@ -70,19 +70,19 @@ function read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs..
 end
 
 function read(ds, layer)
-    df, gnames = AG.getlayer(ds, layer) do table
+    df, gnames, sr = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(ArgumentError("Given layer id/name doesn't exist. For reference this is the dataset:\n$ds"))
         end
         names, _ = AG.schema_names(AG.getfeaturedefn(first(table)))
-        return DataFrame(table), names
+        sr = AG.getspatialref(table)
+        return DataFrame(table), names, sr
     end
     if "" in names(df)
         rename!(df, Symbol("") => :geometry)
         replace!(gnames, Symbol("") => :geometry)
     end
-    proj = AG.getproj(ds)
-    metadata!(df, "crs", proj == "" ? nothing : GFT.WellKnownText(GFT.CRS(), proj), style=:default)
+    metadata!(df, "crs", sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr)), style=:default)
     metadata!(df, "geometrycolumns", Tuple(gnames), style=:default)
     return df
 end
