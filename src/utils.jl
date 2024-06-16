@@ -14,7 +14,7 @@ function getgeometrycolumns(table)
         if isnothing(gc) # fall back to searching for "geometrycolumns" as a string
             gc = DataAPI.metadata(table, "geometrycolumns", (:geometry,))
         end
-        return crs
+        return gc
     else
         return (:geometry,)
     end
