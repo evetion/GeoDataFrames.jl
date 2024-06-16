@@ -10,7 +10,11 @@ function getgeometrycolumns(table)
     if GeoInterface.isfeaturecollection(table)
         return GeoInterface.geometrycolumns(table)
     elseif first(DataAPI.metadatasupport(typeof(table)))
-        return metadata(table, "geometrycolumns", (:geometry,))
+        gc = DataAPI.metadata(table, "GEOINTERFACE:geometrycolumns", nothing)
+        if isnothing(gc) # fall back to searching for "geometrycolumns" as a string
+            gc = DataAPI.metadata(table, "geometrycolumns", (:geometry,))
+        end
+        return crs
     else
         return (:geometry,)
     end
@@ -20,7 +24,11 @@ function getcrs(table)
     if GeoInterface.isfeaturecollection(table)
         return GeoInterface.crs(table)
     elseif first(DataAPI.metadatasupport(typeof(table)))
-        return metadata(table, "crs", nothing)
+        crs = DataAPI.metadata(table, "GEOINTERFACE:crs", nothing)
+        if isnothing(crs) # fall back to searching for "crs" as a string
+            crs = DataAPI.metadata(table, "crs", nothing)
+        end
+        return crs
     else
         return nothing
     end
