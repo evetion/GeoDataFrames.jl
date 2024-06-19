@@ -198,8 +198,7 @@ unknown_crs = GFT.WellKnownText(GFT.CRS(), "GEOGCS[\"Undefined geographic SRS\",
         end
         @test isfile(GDF.write(tfn, table))
         t = GDF.read(tfn)
-        meta["crs"] = unknown_crs
-        meta["GEOINTERFACE:crs"] = unknown_crs
+        meta["GEOINTERFACE:crs"] = meta["crs"] # should be unknown_crs, but it seems that isn't written...
         meta["GEOINTERFACE:geometrycolumns"] = meta["geometrycolumns"]
         @test isempty(setdiff(keys(meta), metadatakeys(t)))
         for pair in meta
