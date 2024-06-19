@@ -82,7 +82,6 @@ function read(ds, layer)
         rename!(df, Symbol("") => :geometry)
         replace!(gnames, Symbol("") => :geometry)
     end
-    println("HELLO")
     crs = sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr))
     geometrycolumns = Tuple(gnames)
     metadata!(df, "crs", crs, style=:default)
