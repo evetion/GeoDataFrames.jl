@@ -16,14 +16,14 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
-        "Background" => Any[
-            "Motivation"=>"background/geopandas.md",
-            "Future plans"=>"background/todo.md",
-        ],
         "Tutorials" => Any[
             "Installation"=>"tutorials/installation.md",
             "Usage"=>"tutorials/usage.md",
             "Operations"=>"tutorials/ops.md",
+        ],
+        "Background" => Any[
+            "Motivation"=>"background/geopandas.md",
+            "Future plans"=>"background/todo.md",
         ],
         "Reference" => Any[
             "API" => "reference/api.md"
