@@ -82,8 +82,13 @@ function read(ds, layer)
         rename!(df, Symbol("") => :geometry)
         replace!(gnames, Symbol("") => :geometry)
     end
-    metadata!(df, "crs", sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr)), style=:default)
-    metadata!(df, "geometrycolumns", Tuple(gnames), style=:default)
+    crs = sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr))
+    geometrycolumns = Tuple(gnames)
+    metadata!(df, "crs", crs, style=:default)
+    metadata!(df, "geometrycolumns", geometrycolumns, style=:default)    
+    # Also add the GEOINTERFACE:property as a namespaced thing
+    metadata!(df, "GEOINTERFACE:crs", crs, style=:default)
+    metadata!(df, "GEOINTERFACE:geometrycolumns", geometrycolumns, style=:default)
     return df
 end
 
