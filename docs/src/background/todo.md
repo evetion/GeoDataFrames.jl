@@ -3,8 +3,8 @@
 - [ ] IGeometry should be IGeometry{WKBType} for easy Schema detection, fix upstream
 - [ ] Empty geom column name fix should be moved upstream
 - [ ] More drivers selected on extension
-- [ ] CRS stored in metadata
+- [X] CRS stored in metadata
 - [ ] Work on Geointerface integration
-- [ ] Work on spatial joins/filters
+- [ ] Work on spatial joins/filters (see also [GeometryOps.jl](https://github.com/JuliaGeo/GeometryOps.jl))
 - [x] Override showing of WKT geometry on print for performance
 
