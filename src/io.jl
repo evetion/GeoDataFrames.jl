@@ -85,7 +85,8 @@ function read(ds, layer)
     crs = sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr))
     geometrycolumns = Tuple(gnames)
     metadata!(df, "crs", crs, style=:default)
-    metadata!(df, "geometrycolumns", geometrycolumns, style=:default)    
+    metadata!(df, "geometrycolumns", geometrycolumns, style=:default)
+
     # Also add the GEOINTERFACE:property as a namespaced thing
     metadata!(df, "GEOINTERFACE:crs", crs, style=:default)
     metadata!(df, "GEOINTERFACE:geometrycolumns", geometrycolumns, style=:default)
