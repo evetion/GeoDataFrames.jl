@@ -204,11 +204,14 @@ function write(
                                 AG.GDAL.ogr_f_setgeomfielddirectly(
                                     feature.ptr,
                                     i - 1,
-                                    _convert(AG.Geometry, getproperty(row, geom_column)),
+                                    _convert(
+                                        AG.Geometry,
+                                        Tables.getcolumn(row, geom_column),
+                                    ),
                                 )
                             end
                             for (i, (name, _)) in zip(fieldindices, fields)
-                                field = getproperty(row, name)
+                                field = Tables.getcolumn(row, name)
                                 if !ismissing(field)
                                     AG.setfield!(feature, i, field)
                                 else
