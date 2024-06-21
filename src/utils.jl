@@ -1,4 +1,4 @@
-function stringlist(dict::Dict{String,String})
+function stringlist(dict::Dict{String, String})
     sv = Vector{String}()
     for (k, v) in pairs(dict)
         push!(sv, uppercase(string(k)) * "=" * string(v))
@@ -81,5 +81,6 @@ end
 
 # Since `DataFrameRow` is simply a view of a DataFrame, we can reach back 
 # to the original DataFrame to get the metadata.
-GeoInterface.geometrycolumns(row::DataFrameRow) = GeoInterface.geometrycolumns(getfield(row, :df)) # get the parent of the row view
+GeoInterface.geometrycolumns(row::DataFrameRow) =
+    GeoInterface.geometrycolumns(getfield(row, :df)) # get the parent of the row view
 GeoInterface.crs(row::DataFrameRow) = GeoInterface.crs(getfield(row, :df)) # get the parent of the row view
