@@ -252,3 +252,7 @@ function _convert(::Type{T}, geom) where {T <: AG.Geometry}
     )
     return f(GeoInterface.coordinates(geom))
 end
+
+function _convert(::Type{T}, geom::AG.IGeometry) where {T <: AG.Geometry}
+    return AG.unsafe_clone(geom)
+end
