@@ -220,7 +220,15 @@ function write(
                             end
                         end
                     end
-                    can_use_transaction && AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
+                    if can_use_transaction
+                        try
+                            AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
+                        catch e
+                            e isa AG.GDAL.GDALError &&
+                                AG.GDAL.gdaldatasetrollbacktransaction(ds.ptr)
+                            rethrow(e)
+                        end
+                    end
                 end
                 if !can_create_layer
                     @warn "Can't create layers in this format, copying from memory instead."
