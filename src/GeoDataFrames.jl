@@ -6,6 +6,8 @@ using Tables
 import GeoFormatTypes as GFT
 import GeoInterface
 using DataAPI
+using Base.Iterators: partition
+using GDAL
 
 include("exports.jl")
 include("io.jl")

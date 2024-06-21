@@ -96,9 +96,21 @@ end
 """
     write(fn::AbstractString, table; layer_name="data", crs::Union{GFT.GeoFormat,Nothing}=crs(table), driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
 
-Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
+Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries. 
+
+Experimental: Fast chunked writes can be enabled by setting `use_gdal_copy=true` and `chunksize` to the desired value (default 20000). 
 """
-function write(fn::AbstractString, table; layer_name::AbstractString="data", crs::Union{GFT.GeoFormat,Nothing}=getcrs(table), driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict{String,String}(), geom_columns=getgeometrycolumns(table), kwargs...)
+function write(
+    fn::AbstractString,
+    table;
+    layer_name::AbstractString="data",
+    crs::Union{GFT.GeoFormat,Nothing}=getcrs(table),
+    driver::Union{Nothing,AbstractString}=nothing,
+    options::Dict{String,String}=Dict{String,String}(),
+    geom_columns=getgeometrycolumns(table),
+    use_gdal_copy = true,
+    chunksize = 20000,
+    kwargs...)
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
 
@@ -150,6 +162,7 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
     ) do ds
         AG.newspatialref() do spatialref
             crs !== nothing && AG.importCRS!(spatialref, crs)
+
             AG.createlayer(
                 name=layer_name,
                 geom=first(geom_types),  # how to set the name though?
@@ -181,9 +194,43 @@ function write(fn::AbstractString, table; layer_name::AbstractString="data", crs
                             end
                         end
                     end
-                end
-                AG.copy(layer, dataset=ds, name=layer_name, options=stringlist(options))
-            end
+                end # for
+
+                if use_gdal_copy
+                    AG.copy(
+                        layer;
+                        dataset = ds,
+                        name = layer_name,
+                        options = stringlist(options),
+                    )
+                else
+                    AG.createlayer(;
+                        name = layer_name,
+                        dataset = ds,
+                        geom = AG.getgeomtype(layer),
+                        spatialref = AG.getspatialref(layer),
+                        options = stringlist(options),
+                    ) do targetlayer
+                        # add field definitions
+                        sourcelayerdef = AG.layerdefn(layer)
+                        for fieldidx in 0:(AG.nfield(layer)-1)
+                            AG.addfielddefn!(
+                                targetlayer,
+                                AG.getfielddefn(sourcelayerdef, fieldidx),
+                            )
+                        end
+        
+                        # iterate over features in chunks to get better speed than gdaldatasetcopylayer
+                        for chunk in Iterators.partition(layer, chunksize)
+                            GDAL.ogr_l_starttransaction(targetlayer)
+                            for feature in chunk
+                                AG.addfeature!(targetlayer, feature)
+                            end
+                            GDAL.ogr_l_committransaction(targetlayer)
+                        end
+                    end # createlayer
+                end # if use_gdal_copy
+            end # layer
         end
     end
     fn
