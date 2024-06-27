@@ -265,4 +265,14 @@ unknown_crs = GFT.WellKnownText(
         @test meta["GEOINTERFACE:geometrycolumns"] == meta["geometrycolumns"] == (:bar,)
         @test isempty(setdiff(keys(meta), metadatakeys(t)))
     end
+
+    @testset "Read geodatabase (folder)" begin
+        table = DataFrame(; geom = AG.createpoint(1.0, 2.0), name = "test")
+        gdbdir = joinpath(testdatadir, "test_options.gdb")
+        GDF.write(gdbdir, table; driver = "OpenFileGDB", geom_column = :geom)
+        @test isdir(gdbdir)
+        table = GDF.read(gdbdir)
+        @test nrow(table) == 1
+        rm(gdbdir; recursive = true)
+    end
 end

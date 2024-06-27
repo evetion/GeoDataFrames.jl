@@ -50,7 +50,11 @@ Read a file into a DataFrame. Any kwargs are passed onto ArchGDAL [here](https:/
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 """
 function read(fn::AbstractString; kwargs...)
-    startswith(fn, "/vsi") || occursin(":", fn) || isfile(fn) || error("File not found.")
+    startswith(fn, "/vsi") ||
+        occursin(":", fn) ||
+        isfile(fn) ||
+        isdir(fn) ||
+        error("File not found.")
     t = AG.read(fn; kwargs...) do ds
         if AG.nlayer(ds) > 1
             @warn "This file has multiple layers, you only get the first layer by default now."
@@ -61,7 +65,11 @@ function read(fn::AbstractString; kwargs...)
 end
 
 function read(fn::AbstractString, layer::Union{Integer, AbstractString}; kwargs...)
-    startswith(fn, "/vsi") || occursin(":", fn) || isfile(fn) || error("File not found.")
+    startswith(fn, "/vsi") ||
+        occursin(":", fn) ||
+        isfile(fn) ||
+        isdir(fn) ||
+        error("File not found.")
     t = AG.read(fn; kwargs...) do ds
         return read(ds, layer)
     end
