@@ -6,6 +6,13 @@ using Makie, GeoMakie
 import GeoDataFrames.DataFrame
 
 
+"""
+    plot(gdf::DataFrame, geom_col::Symbol)
+
+# Arguments
+- `gdf` : GeoDataFrame
+- `geom_col` : Column holding geometries to display
+"""
 function GeoDataFrames.plot(gdf::DataFrame, geom_col::Symbol)
     f = Figure(; size=(600, 900))
     ga = GeoAxis(
@@ -25,8 +32,6 @@ function GeoDataFrames.plot(gdf::DataFrame, geom_col::Symbol)
 
     xlims!(ga)
     ylims!(ga)
-
-    # display(f)
 
     return f
 end
