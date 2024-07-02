@@ -10,5 +10,6 @@ using DataAPI
 include("exports.jl")
 include("io.jl")
 include("utils.jl")
+include("viz.jl")
 
 end  # module
