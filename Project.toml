@@ -12,12 +12,21 @@ GeoInterface = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
+[weakdeps]
+GeoMakie = "db073c08-6b98-4ee5-b6a4-5efafb3259c6"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+
+[extensions]
+MakieExt = ["GeoMakie", "Makie"]
+
 [compat]
 ArchGDAL = "0.10"
 DataAPI = "1.13"
 DataFrames = "1.4"
 GeoFormatTypes = "0.3, 0.4"
 GeoInterface = "1.0.1"
+GeoMakie = "0.6, 0.7"
+Makie = "0.20.8, 0.21"
 Tables = "1"
 julia = "1.6"
 
