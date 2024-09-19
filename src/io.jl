@@ -54,7 +54,7 @@ function read(fn::AbstractString; kwargs...)
         occursin(":", fn) ||
         isfile(fn) ||
         isdir(fn) ||
-        error("File not found.")
+        error("File not found: `$fn`.")
     t = AG.read(fn; kwargs...) do ds
         if AG.nlayer(ds) > 1
             @warn "This file has multiple layers, you only get the first layer by default now."
