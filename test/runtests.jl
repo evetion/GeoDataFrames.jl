@@ -275,4 +275,15 @@ unknown_crs = GFT.WellKnownText(
         @test nrow(table) == 1
         rm(gdbdir; recursive = true)
     end
+
+    @testset "Non-spatial columns #77" begin
+        df = DataFrame(; geometry = vec(reinterpret(Tuple{Float64, Float64}, rand(2, 100))))
+        df.area_km2 = [rand(10) for i in 1:100]
+        GDF.write("test.gpkg", df)
+    end
+
+    @testset "Non existing Windows path #78" begin
+        wfn = "C:\\non_existing_folder\\non_existing_file.shp"
+        @test_throws ErrorException("Unable to open $wfn.") GDF.read(wfn)
+    end
 end
