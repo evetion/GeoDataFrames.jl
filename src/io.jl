@@ -56,6 +56,7 @@ function read(fn::AbstractString; kwargs...)
         isdir(fn) ||
         error("File not found.")
     t = AG.read(fn; kwargs...) do ds
+        ds.ptr == C_NULL && error("Unable to open $fn.")
         if AG.nlayer(ds) > 1
             @warn "This file has multiple layers, you only get the first layer by default now."
         end
@@ -160,22 +161,25 @@ function write(
     fields = Vector{Tuple{Symbol, DataType}}()
     for (name, type) in zip(sch.names, sch.types)
         if !(name in geom_columns)
-            AG.GeoInterface.isgeometry(type) && error(
-                "Did you mean to use the `geom_columns` argument to specify $name is a geometry?",
-            )
-            types = Base.uniontypes(type)
-            if length(types) == 1
-                push!(fields, (Symbol(name), type))
-            elseif length(types) == 2 && Missing in types
-                push!(fields, (Symbol(name), types[2]))
-            else
-                error("Can't convert to GDAL type from $type. Please file an issue.")
+            AG.GeoInterface.isgeometry(type) &&
+                @warn "Writing $name as a non-spatial column, use the `geom_columns` argument to write as a geometry."
+            nmtype = nonmissingtype(type)
+            if !hasmethod(convert, (Type{AG.OGRFieldType}, Type{nmtype}))
+                error("Can't convert $type to an OGRFieldType. Please report an issue.")
             end
+            push!(fields, (Symbol(name), nmtype))
         end
     end
     AG.create(fn; driver = driver) do ds
         AG.newspatialref() do spatialref
-            crs !== nothing && AG.importCRS!(spatialref, crs)
+            if isnothing(crs)
+                crs = GFT.WellKnownText2(
+                    GFT.CRS(),
+                    """LOCAL_CS["Undefined SRS",LOCAL_DATUM["unknown",32767],UNIT["unknown",0],AXIS["Easting",EAST],AXIS["Northing",NORTH]]""",
+                )
+            end
+
+            AG.importCRS!(spatialref, crs)
 
             can_create_layer = AG.testcapability(ds, "CreateLayer")
             can_use_transaction = AG.testcapability(ds, "Transactions")
