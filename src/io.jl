@@ -54,7 +54,7 @@ function read(fn::AbstractString; kwargs...)
         occursin(":", fn) ||
         isfile(fn) ||
         isdir(fn) ||
-        error("File not found.")
+        error("File not found: `$fn`.")
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
         if AG.nlayer(ds) > 1
