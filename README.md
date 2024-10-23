@@ -60,8 +60,7 @@ GDF.write("test_points.shp", df)
 
 You can also set options such as the layer_name, coordinate reference system, the [driver](https://gdal.org/drivers/vector/) and its options:
 ```julia
-import GeoFormatTypes as GFT
-GDF.write("test_points.shp", df; layer_name="data", crs=GFT.EPSG(4326), driver="FlatGeoBuf", options=Dict("SPATIAL_INDEX"=>"YES"))
+GDF.write("test_points.shp", df; layer_name="data", crs=EPSG(4326), driver="FlatGeoBuf", options=Dict("SPATIAL_INDEX"=>"YES"))
 ```
 
 Note that any Tables.jl compatible table with GeoInterface.jl compatible geometries can be written by GeoDataFrames. You might want
@@ -97,8 +96,7 @@ df
 
 ### Reprojection
 ```julia
-import GeoFormatTypes as GFT
-df.geometry = reproject(df.geometry, GFT.EPSG(4326), GFT.EPSG(28992))
+df.geometry = reproject(df.geometry, EPSG(4326), EPSG(28992))
 10-element Vector{ArchGDAL.IGeometry{ArchGDAL.wkbPolygon}}:
  Geometry: POLYGON ((-472026.042542408 -4406233.59953401,-537 ... 401))
  Geometry: POLYGON ((-417143.506054105 -4395423.99277048,-482 ... 048))
