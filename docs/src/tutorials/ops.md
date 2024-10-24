@@ -25,8 +25,7 @@ df
 
 ## Reprojection
 ```julia
-import GeoFormatTypes as GFT
-df.geom = reproject(df.geom, GFT.EPSG(4326), GFT.EPSG(28992))
+df.geom = reproject(df.geom, EPSG(4326), EPSG(28992))
 10-element Vector{ArchGDAL.IGeometry{ArchGDAL.wkbPolygon}}:
  Geometry: POLYGON ((-472026.042542408 -4406233.59953401,-537 ... 401))
  Geometry: POLYGON ((-417143.506054105 -4395423.99277048,-482 ... 048))

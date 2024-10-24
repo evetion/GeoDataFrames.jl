@@ -55,8 +55,7 @@ GDF.write("test_points.shp", df)
 
 You can also set options such as the layer_name, coordinate reference system.
 ```julia
-import GeoFormatTypes as GFT
-GDF.write("test_points.shp", df; layer_name="data", crs=GFT.EPSG(4326))
+GDF.write("test_points.shp", df; layer_name="data", crs=EPSG(4326))
 ```
 
 The most common file extensions are recognized, but you can override this or write uncommon files by setting the driver option. See [here](https://gdal.org/drivers/vector/index.html) for a list of (short) driver names.
@@ -83,5 +82,3 @@ when enabled by the driver, can be provided in this way.
 table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
 GDF.write(tfn, table; geom_columns=(:geom),)
 ```
-Toggle all file notes
-Toggle all file annotations
