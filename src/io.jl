@@ -86,7 +86,7 @@ function read(ds, layer)
                 ),
             )
         end
-        names, _ = AG.schema_names(AG.getfeaturedefn(first(table)))
+        names, x = AG.schema_names(AG.layerdefn(table))
         sr = AG.getspatialref(table)
         return DataFrame(table), names, sr
     end
