@@ -22,24 +22,24 @@ function find_driver(fn::AbstractString)
 end
 
 const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
-    (AG.GeoInterface.PointTrait, 2) => AG.wkbPoint,
-    (AG.GeoInterface.PointTrait, 3) => AG.wkbPoint25D,
-    (AG.GeoInterface.PointTrait, 4) => AG.wkbPointZM,
-    (AG.GeoInterface.MultiPointTrait, 2) => AG.wkbMultiPoint,
-    (AG.GeoInterface.MultiPointTrait, 3) => AG.wkbMultiPoint25D,
-    (AG.GeoInterface.MultiPointTrait, 4) => AG.wkbMultiPointZM,
-    (AG.GeoInterface.LineStringTrait, 2) => AG.wkbLineString,
-    (AG.GeoInterface.LineStringTrait, 3) => AG.wkbLineString25D,
-    (AG.GeoInterface.LineStringTrait, 4) => AG.wkbLineStringZM,
-    (AG.GeoInterface.MultiLineStringTrait, 2) => AG.wkbMultiLineString,
-    (AG.GeoInterface.MultiLineStringTrait, 3) => AG.wkbMultiLineString25D,
-    (AG.GeoInterface.MultiLineStringTrait, 4) => AG.wkbMultiLineStringZM,
-    (AG.GeoInterface.PolygonTrait, 2) => AG.wkbPolygon,
-    (AG.GeoInterface.PolygonTrait, 3) => AG.wkbPolygon25D,
-    (AG.GeoInterface.PolygonTrait, 4) => AG.wkbPolygonZM,
-    (AG.GeoInterface.MultiPolygonTrait, 2) => AG.wkbMultiPolygon,
-    (AG.GeoInterface.MultiPolygonTrait, 3) => AG.wkbMultiPolygon25D,
-    (AG.GeoInterface.MultiPolygonTrait, 4) => AG.wkbMultiPolygonZM,
+    (GI.PointTrait, 2) => AG.wkbPoint,
+    (GI.PointTrait, 3) => AG.wkbPoint25D,
+    (GI.PointTrait, 4) => AG.wkbPointZM,
+    (GI.MultiPointTrait, 2) => AG.wkbMultiPoint,
+    (GI.MultiPointTrait, 3) => AG.wkbMultiPoint25D,
+    (GI.MultiPointTrait, 4) => AG.wkbMultiPointZM,
+    (GI.LineStringTrait, 2) => AG.wkbLineString,
+    (GI.LineStringTrait, 3) => AG.wkbLineString25D,
+    (GI.LineStringTrait, 4) => AG.wkbLineStringZM,
+    (GI.MultiLineStringTrait, 2) => AG.wkbMultiLineString,
+    (GI.MultiLineStringTrait, 3) => AG.wkbMultiLineString25D,
+    (GI.MultiLineStringTrait, 4) => AG.wkbMultiLineStringZM,
+    (GI.PolygonTrait, 2) => AG.wkbPolygon,
+    (GI.PolygonTrait, 3) => AG.wkbPolygon25D,
+    (GI.PolygonTrait, 4) => AG.wkbPolygonZM,
+    (GI.MultiPolygonTrait, 2) => AG.wkbMultiPolygon,
+    (GI.MultiPolygonTrait, 3) => AG.wkbMultiPolygon25D,
+    (GI.MultiPolygonTrait, 4) => AG.wkbMultiPolygonZM,
 )
 
 """
@@ -49,35 +49,48 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
 Read a file into a DataFrame. Any kwargs are passed onto ArchGDAL [here](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}).
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 """
-function read(fn::AbstractString; kwargs...)
+function read(fn; kwargs...)
+    ext = last(splitext(fn))
+    dr = driver(ext)
+    read(dr, fn; kwargs...)
+end
+
+function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
+    @info "Using GDAL for reading, import $(package(driver)) for a native driver."
+    read(ArchGDALDriver(), fn; kwargs...)
+end
+
+function read(driver::ArchGDALDriver, fn::AbstractString; kwargs...)
     startswith(fn, "/vsi") ||
         occursin(":", fn) ||
         isfile(fn) ||
         isdir(fn) ||
         error("File not found.")
+
+    if :layer in keys(kwargs)
+        layer = kwargs[:layer]
+        kwargs = (k => v for (k, v) in pairs(kwargs) if k != :layer)
+    else
+        layer = nothing
+    end
+
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
-        if AG.nlayer(ds) > 1
-            @warn "This file has multiple layers, you only get the first layer by default now."
+        if AG.nlayer(ds) > 1 && isnothing(layer)
+            @warn "This file has multiple layers, defaulting to first layer."
         end
-        return read(ds, 0)
+        return read(driver, ds, isnothing(layer) ? 0 : layer)
     end
     return t
 end
 
-function read(fn::AbstractString, layer::Union{Integer, AbstractString}; kwargs...)
-    startswith(fn, "/vsi") ||
-        occursin(":", fn) ||
-        isfile(fn) ||
-        isdir(fn) ||
-        error("File not found.")
-    t = AG.read(fn; kwargs...) do ds
-        return read(ds, layer)
-    end
-    return t
-end
+@deprecate read(fn::AbstractString, layer::Union{AbstractString, Integer}; kwargs...) read(
+    fn;
+    layer,
+    kwargs...,
+)
 
-function read(ds, layer)
+function read(::ArchGDALDriver, ds, layer)
     df, gnames, sr = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(
@@ -110,7 +123,18 @@ end
 
 Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
 """
+function write(fn::AbstractString, table; kwargs...)
+    ext = last(splitext(fn))
+    write(driver(ext), fn, table; kwargs...)
+end
+
+function write(driver::AbstractDriver, fn::AbstractString, table; kwargs...)
+    @info "Using GDAL for writing, import $(package(driver)) for a native driver."
+    write(ArchGDALDriver(), fn, table; kwargs...)
+end
+
 function write(
+    ::ArchGDALDriver,
     fn::AbstractString,
     table;
     layer_name::AbstractString = "data",
@@ -126,7 +150,7 @@ function write(
 
     # Determine geometry columns
     isnothing(geom_columns) && error(
-        "Please set `geom_columns` kw or define `GeoInterface.geometrycolumns` for $(typeof(table))",
+        "Please set `geom_columns` kw or define `GI.geometrycolumns` for $(typeof(table))",
     )
     if :geom_column in keys(kwargs)  # backwards compatible
         geom_columns = (kwargs[:geom_column],)
@@ -134,8 +158,9 @@ function write(
 
     geom_types = []
     for geom_column in geom_columns
-        trait = AG.GeoInterface.geomtrait(getproperty(first(rows), geom_column))
-        ndim = AG.GeoInterface.ncoord(getproperty(first(rows), geom_column))
+        geometry = getproperty(first(rows), geom_column)
+        trait = GI.geomtrait(geometry)
+        ndim = GI.ncoord(geometry)
         geom_type = get(lookup_type, (typeof(trait), ndim), nothing)
         isnothing(geom_type) && throw(
             ArgumentError(
@@ -161,7 +186,7 @@ function write(
     fields = Vector{Tuple{Symbol, DataType}}()
     for (name, type) in zip(sch.names, sch.types)
         if !(name in geom_columns)
-            AG.GeoInterface.isgeometry(type) &&
+            GI.isgeometry(type) &&
                 @warn "Writing $name as a non-spatial column, use the `geom_columns` argument to write as a geometry."
             nmtype = nonmissingtype(type)
             if !hasmethod(convert, (Type{AG.OGRFieldType}, Type{nmtype}))
@@ -259,21 +284,21 @@ end
 
 # This should be upstreamed to ArchGDAL
 const lookup_method = Dict{DataType, Function}(
-    GeoInterface.PointTrait => AG.unsafe_createpoint,
-    GeoInterface.MultiPointTrait => AG.unsafe_createmultipoint,
-    GeoInterface.LineStringTrait => AG.unsafe_createlinestring,
-    GeoInterface.LinearRingTrait => AG.unsafe_createlinearring,
-    GeoInterface.MultiLineStringTrait => AG.unsafe_createmultilinestring,
-    GeoInterface.PolygonTrait => AG.unsafe_createpolygon,
-    GeoInterface.MultiPolygonTrait => AG.unsafe_createmultipolygon,
+    GI.PointTrait => AG.unsafe_createpoint,
+    GI.MultiPointTrait => AG.unsafe_createmultipoint,
+    GI.LineStringTrait => AG.unsafe_createlinestring,
+    GI.LinearRingTrait => AG.unsafe_createlinearring,
+    GI.MultiLineStringTrait => AG.unsafe_createmultilinestring,
+    GI.PolygonTrait => AG.unsafe_createpolygon,
+    GI.MultiPolygonTrait => AG.unsafe_createmultipolygon,
 )
 
 function _convert(::Type{T}, geom) where {T <: AG.Geometry}
-    f = get(lookup_method, typeof(GeoInterface.geomtrait(geom)), nothing)
+    f = get(lookup_method, typeof(GI.geomtrait(geom)), nothing)
     isnothing(f) && error(
         "Cannot convert an object of $(typeof(geom)) with the $(typeof(type)) trait (yet). Please report an issue.",
     )
-    return f(GeoInterface.coordinates(geom))
+    return f(GI.coordinates(geom))
 end
 
 function _convert(::Type{T}, geom::AG.IGeometry) where {T <: AG.Geometry}
