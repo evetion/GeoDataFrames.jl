@@ -1,7 +1,7 @@
 name = "GeoDataFrames"
 uuid = "62cb38b5-d8d2-4862-a48e-6a340996859f"
 authors = ["Maarten Pronk <git@evetion.nl> and contributors"]
-version = "0.3.10"
+version = "0.3.11"
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
@@ -23,7 +23,7 @@ GeoFormatTypes = "0.3, 0.4"
 GeoInterface = "1.0.1"
 Reexport = "1.2"
 Tables = "1"
-julia = "1.6"
+julia = "1.9"
 
 [extras]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
