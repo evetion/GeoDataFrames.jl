@@ -192,8 +192,10 @@ unknown_crs = GFT.WellKnownText(
 
     @testset "Reproject" begin
         table = DataFrame(; geometry = AG.createpoint.([[0, 0, 0]]), name = "test")
-        AG.reproject(table.geometry, GFT.EPSG(4326), GFT.EPSG(28992))
-        @test GDF.AG.getpoint(table.geometry[1], 0)[1] ≈ -587791.596556932
+        geoms = GDF.reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
+        ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992))
+        @test GDF.AG.getpoint(geoms[1], 0)[1] ≈ -587791.596556932
+        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ -587791.596556932
         GDF.write(
             joinpath(testdatadir, "test_reprojection.gpkg"),
             table;
@@ -269,11 +271,11 @@ unknown_crs = GFT.WellKnownText(
     @testset "Read geodatabase (folder)" begin
         table = DataFrame(; geom = AG.createpoint(1.0, 2.0), name = "test")
         gdbdir = joinpath(testdatadir, "test_options.gdb")
+        isdir(gdbdir) && rm(gdbdir; recursive = true)
         GDF.write(gdbdir, table; driver = "OpenFileGDB", geom_column = :geom)
         @test isdir(gdbdir)
         table = GDF.read(gdbdir)
         @test nrow(table) == 1
-        rm(gdbdir; recursive = true)
     end
 
     @testset "Non-spatial columns #77" begin
@@ -285,5 +287,17 @@ unknown_crs = GFT.WellKnownText(
     @testset "Non existing Windows path #78" begin
         wfn = "C:\\non_existing_folder\\non_existing_file.shp"
         @test_throws ErrorException("Unable to open $wfn.") GDF.read(wfn)
+    end
+
+    @testset "Writing crs of geometry" begin
+        geom = GI.Wrappers.Point(0, 0; crs = GFT.EPSG(4326))
+        df = DataFrame(; geometry = [geom])
+        @test isnothing(GI.crs(df))
+        GDF.write("test_geom_crs.gpkg", df)
+        df = GDF.read("test_geom_crs.gpkg")
+        @test GI.crs(df) == GFT.WellKnownText{GFT.CRS}(
+            GFT.CRS(),
+            "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]",
+        )
     end
 end

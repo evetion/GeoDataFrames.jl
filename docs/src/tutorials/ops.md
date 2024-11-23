@@ -25,7 +25,11 @@ df
 
 ## Reprojection
 ```julia
-df.geom = reproject(df.geom, EPSG(4326), EPSG(28992))
+#Either reproject the whole dataframe (which will set the correct metadata):
+dfr = reproject(df, EPSG(4326), EPSG(28992))
+
+# Or reproject the individual geometries only:
+df.geometry = reproject(df.geometry, EPSG(4326), EPSG(28992))
 10-element Vector{ArchGDAL.IGeometry{ArchGDAL.wkbPolygon}}:
  Geometry: POLYGON ((-472026.042542408 -4406233.59953401,-537 ... 401))
  Geometry: POLYGON ((-417143.506054105 -4395423.99277048,-482 ... 048))
