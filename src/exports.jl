@@ -11,7 +11,43 @@
     createpolygon,
     createmultilinestring,
     createmultipolygon
-@reexport using ArchGDAL: reproject
+
+@reexport using Extents
+@reexport using GeoInterface: crs
+
+using GeoFormatTypes:
+    AbstractWellKnownText,
+    CoordSys,
+    CoordinateReferenceSystemFormat,
+    EPSG,
+    ESRIWellKnownText,
+    GML,
+    GeoFormat,
+    GeoFormatTypes,
+    GeometryFormat,
+    KML,
+    MixedFormat,
+    ProjJSON,
+    ProjString,
+    WellKnownBinary,
+    WellKnownText,
+    WellKnownText2 #=GeoJSON,=#
+export AbstractWellKnownText,
+    CoordSys,
+    CoordinateReferenceSystemFormat,
+    EPSG,
+    ESRIWellKnownText,
+    GML,
+    GeoFormat,
+    GeoFormatTypes,
+    GeometryFormat,
+    KML,
+    MixedFormat,
+    ProjJSON,
+    ProjString,
+    WellKnownBinary,
+    WellKnownText,
+    WellKnownText2 #=GeoJSON,=#
 
 AG.intersects(a::Vector{AG.IGeometry{T}}, b::Vector{AG.IGeometry{X}}) where {X, T} =
     AG.intersects.(a, b)
