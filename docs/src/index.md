@@ -7,7 +7,7 @@ hero:
   name: "GeoDataFrames.jl"
   tagline: "Simple geographical vector data interaction"
   image:
-    src: assets/julia-dots-table.svg
+    src: logo.svg
     alt: GeoDataFrames
   actions:
     - theme: brand
