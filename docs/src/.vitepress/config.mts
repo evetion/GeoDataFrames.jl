@@ -54,7 +54,7 @@ export default defineConfig({
   },
   themeConfig: {
     outline: 'deep',
-    logo: 'julia-dots-table.svg',
+    logo: '/logo.svg',
     search: {
       provider: 'local',
       options: {
