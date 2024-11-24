@@ -70,7 +70,7 @@ function read(fn::AbstractString, layer::Union{Integer, AbstractString}; kwargs.
         occursin(":", fn) ||
         isfile(fn) ||
         isdir(fn) ||
-        error("File not found.")
+        error("File not found: $fn")
     t = AG.read(fn; kwargs...) do ds
         return read(ds, layer)
     end
