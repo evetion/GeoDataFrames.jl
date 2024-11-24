@@ -2,6 +2,10 @@
 
 ```@autodocs
 Modules = [GeoDataFrames]
-Order   = [:function, :type]
 Public = false
+```
+
+```@docs
+reproject
+reproject!
 ```

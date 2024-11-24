@@ -4,6 +4,71 @@ CurrentModule = GeoDataFrames
 
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+- Updated documentation, now using VitePress.
+- Add new driver framework to read files using native drivers.
+- Added native driver package extensions on GeoJSON, ShapeFile, and FlatGeobuf.
+
+## v0.3.11
+- Changed `reproject` to work on a DataFrame, correctly setting the (crs) metadata
+- Handle empty layers
+- Re-export GeoFormatTypes and Extents, making things like `CRS` and `Extent` available
+- Warn on possible geometry column instead of throwing an error.
+- Improve error message when file is not found.
+
+## v0.3.10
+- Changed DataFrame metadata style to `:note`, preserving crs after DataFrame operations.
+
+## v0.3.9
+- Implemented GeoInterface methods on DataFrame(Rows).
+- Implements transaction support on writing, notably improving writing performance.
+
+## v0.3.8
+- Retrieve CRS from layer, instead of dataset, preventing some `nothing` crs.
+
+## v0.3.7
+- Correctly write 3d geometries (which were previously flattened to 2d).
+
+## v0.3.6
+- Use GDAL to identify drivers, instead of relying only on file extension.
+
+## v0.3.5
+- Drop support for ArchGDAL 0.9.
+
+## v0.3.4
+- Use GeoInterface to convert geometries.
+
+## v0.3.3
+- Update to ArchGDAL 0.10
+- Change default geometry column name to `geometry` (was `geom`).
+
+## v0.3.2
+- Use metadata to store/retrieve CRS and geometry column information.
+
+## v0.3.1
+- Error out early on non existent files.
+
+## v0.3.0
+- Change `geom_column` to `geom_columns`, defaulting to using GeoInterface.jl.
+- Added options keyword to pass configuration to the GDAL driver.
+- Allow any GeoInterface.jl compatible geometry to be written (was only ArchGDAL geometries).
+
+## v0.2.4
+- Upgrade GeoFormatTypes to v0.4
+
+
+## v0.2.3
+- Update ArchGDAL compat to v0.9
+
+## v0.2.2
+- Expanded documentation
+- Free GDAL structures as soon as possible
+
 ## v0.2.1
 - Don't export `isempty` as it clashes with other exports
 - Compatability with ArchGDAL v0.8 (adds missing support when reading 🎉)
