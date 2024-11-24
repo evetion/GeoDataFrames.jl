@@ -38,7 +38,7 @@ makedocs(;
 deploydocs(;
     repo = "github.com/evetion/GeoDataFrames.jl",
     target = "build",
-    devbranch = "main",
+    devbranch = "master",
     branch = "gh-pages",
     push_preview = true,
 )
