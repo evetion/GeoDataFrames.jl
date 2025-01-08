@@ -8,9 +8,6 @@ import GeoInterface as GI
 using DataAPI
 using Reexport
 
-@reexport using Extents
-@reexport using GeoFormatTypes
-
 include("exports.jl")
 include("drivers.jl")
 include("io.jl")

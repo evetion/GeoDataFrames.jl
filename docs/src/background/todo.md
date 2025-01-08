@@ -1,10 +1,8 @@
-# TODO
-- [ ] Prepared geometry, spatial indices (LibGEOS) (probably can't be done as GDAL OGR is not directly compatible)
-- [x] IGeometry should be IGeometry{WKBType} for easy Schema detection, fix upstream
-- [ ] Empty geom column name fix should be moved upstream
-- [ ] More drivers selected on extension
-- [x] CRS stored in metadata
-- [x] Work on Geointerface integration
-- [ ] Work on spatial joins/filters
-- [x] Override showing of WKT geometry on print for performance
+# Planned features
 
+The following features are planned for future releases:
+
+- Prepared geometry to speed up repeated GDAL operations.
+- Spatial indice support to speed up spatial queries (see also [GeoAcceleratedArrays.jl](https://github.com/evetion/GeoAcceleratedArrays.jl))
+- Spatial joins (see also [GeometryOps.jl](https://github.com/JuliaGeo/GeometryOps.jl))
+- Wrapper types around DataFrame and geometry columns for easier plotting and dispatch.

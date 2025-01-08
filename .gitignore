@@ -11,3 +11,6 @@ docs/src/*.png
 *.sha256
 .DS_Store
 Manifest.toml
+docs/final_site
+node_modules/
+test/data

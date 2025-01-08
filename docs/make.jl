@@ -1,37 +1,44 @@
 using GeoDataFrames
 using Documenter
+using DocumenterVitepress
+
+DocMeta.setdocmeta!(GeoDataFrames, :DocTestSetup, :(using GeoDataFrames); recursive = true)
 
 img = joinpath(@__DIR__, "src/plot_points.png")
 isfile(img) || cp(joinpath(@__DIR__, "../img/plot_points.png"), img)
 
 makedocs(;
-    modules=[GeoDataFrames],
-    authors="Maarten Pronk <git@evetion.nl> and contributors",
-    repo="https://github.com/evetion/GeoDataFrames.jl/blob/{commit}{path}#L{line}",
-    sitename="GeoDataFrames.jl",
-    format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://evetion.github.io/GeoDataFrames.jl",
-        assets=String[]
+    modules = [GeoDataFrames],
+    authors = "Maarten Pronk <git@evetion.nl> and contributors",
+    repo = "https://github.com/evetion/GeoDataFrames.jl/blob/{commit}{path}#L{line}",
+    sitename = "GeoDataFrames.jl",
+    format = MarkdownVitepress(;
+        repo = "github.com/evetion/GeoDataFrames.jl",
     ),
-    pages=[
+    pages = [
         "Home" => "index.md",
-        "Background" => Any[
-            "Motivation"=>"background/geopandas.md",
-            "Future plans"=>"background/todo.md",
-        ],
         "Tutorials" => Any[
-            "Installation"=>"tutorials/installation.md",
-            "Usage"=>"tutorials/usage.md",
-            "Operations"=>"tutorials/ops.md",
+            "Installation" => "tutorials/installation.md",
+            "Usage" => "tutorials/usage.md",
+            "Operations" => "tutorials/ops.md",
+        ],
+        "Background" => Any[
+            "Motivation" => "background/geopandas.md",
+            "Future plans" => "background/todo.md",
+            "File formats" => "background/formats.md",
         ],
         "Reference" => Any[
             "API" => "reference/api.md"
             "Changelog" => "reference/changes.md"
         ],
-    ]
+    ],
+    warnonly = [:missing_docs, :cross_references],
 )
 
 deploydocs(;
-    repo="github.com/evetion/GeoDataFrames.jl"
+    repo = "github.com/evetion/GeoDataFrames.jl",
+    target = "build",
+    devbranch = "master",
+    branch = "gh-pages",
+    push_preview = true,
 )

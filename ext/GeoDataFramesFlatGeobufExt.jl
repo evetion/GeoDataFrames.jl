@@ -1,4 +1,5 @@
-module FlatGeobufExt
+module GeoDataFramesFlatGeobufExt
+
 using FlatGeobuf
 using GeoDataFrames: FlatGeobufDriver, ArchGDALDriver, GeoDataFrames
 

@@ -1,4 +1,5 @@
-module ShapefileExt
+module GeoDataFramesShapefileExt
+
 using GeoDataFrames: ShapefileDriver, GeoDataFrames
 using Shapefile
 

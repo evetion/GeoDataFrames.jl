@@ -1,4 +1,5 @@
-module GeoJSONExt
+module GeoDataFramesGeoJSONExt
+
 using GeoDataFrames: GeoJSONDriver, GeoDataFrames
 using GeoJSON
 

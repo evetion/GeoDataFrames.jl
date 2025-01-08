@@ -99,8 +99,7 @@ function read(::ArchGDALDriver, ds, layer)
     if "" in names(df)
         rename!(df, Symbol("") => :geometry)
         replace!(gnames, Symbol("") => :geometry)
-    end
-    if "geom" in names(df)
+    elseif "geom" in names(df)
         rename!(df, Symbol("geom") => :geometry)
         replace!(gnames, Symbol("geom") => :geometry)
     end
