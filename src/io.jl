@@ -60,19 +60,12 @@ function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
     read(ArchGDALDriver(), fn; kwargs...)
 end
 
-function read(driver::ArchGDALDriver, fn::AbstractString; kwargs...)
+function read(driver::ArchGDALDriver, fn::AbstractString; layer=nothing, kwargs...)
     startswith(fn, "/vsi") ||
         occursin(":", fn) ||
         isfile(fn) ||
         isdir(fn) ||
         error("File not found.")
-
-    if :layer in keys(kwargs)
-        layer = kwargs[:layer]
-        kwargs = (k => v for (k, v) in pairs(kwargs) if k != :layer)
-    else
-        layer = nothing
-    end
 
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
@@ -106,6 +99,10 @@ function read(::ArchGDALDriver, ds, layer)
     if "" in names(df)
         rename!(df, Symbol("") => :geometry)
         replace!(gnames, Symbol("") => :geometry)
+    end
+    if "geom" in names(df)
+        rename!(df, Symbol("geom") => :geometry)
+        replace!(gnames, Symbol("geom") => :geometry)
     end
     crs = sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr))
     geometrycolumns = Tuple(gnames)
