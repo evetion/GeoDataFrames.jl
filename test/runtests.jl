@@ -43,6 +43,10 @@ remotefiles = [
         "3dc1a3df76290cc62aa6d7aa6aa00d0988b3157ee77a042167b3f8302d05aa6c",
     ),
     (
+        "https://raw.githubusercontent.com/geoarrow/geoarrow-data/v0.1.0/example/example-multipolygon_z.arrow",
+        "0cd4d7c5611581a5ae30fbbacc6f733a7da2ae78ac02ef8cffeb1e2d4f39b91c",
+    ),
+    (
         "https://storage.googleapis.com/open-geodata/linz-examples/nz-buildings-outlines.parquet",
         "b64389237b9879c275aec4e47f0e6be8fdd5d64437a05aef10839f574efc5dbc",
     ),
@@ -357,6 +361,20 @@ unknown_crs = GFT.WellKnownText(
 
         GDF.write("test_native.parquet", df)
         GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
+    end
+    @testset "GeoArrow" begin
+        using GeoArrow
+        fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
+        df = GDF.read(fn)
+        ENV["OGR_ARROW_ALLOW_ALL_DIMS"] = "YES" 
+        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+        @test sort(names(df)) == sort(names(df2))
+        @test nrow(df) == nrow(df2)
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+
+        GDF.write("test_native.arrow", df)
+        GDF.write(GDF.ArchGDALDriver(), "test.arrow", df)
     end
     @testset "Writing crs of geometry" begin
         geom = GI.Wrappers.Point(0, 0; crs = GFT.EPSG(4326))
