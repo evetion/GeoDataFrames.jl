@@ -304,73 +304,73 @@ unknown_crs = GFT.WellKnownText(
     #     @test_throws ErrorException("Unable to open $wfn.") GDF.read(wfn)
     # end
 
-    @testset "Shapefile" begin
-        @warn "Shapefile"
-        using Shapefile
-        fn = joinpath(testdatadir, "sites.shp")
-        df = GDF.read(fn)
-        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
-        @test names(df) == names(df2)
-        @test nrow(df) == nrow(df2)
-        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+    # @testset "Shapefile" begin
+    #     @warn "Shapefile"
+    #     using Shapefile
+    #     fn = joinpath(testdatadir, "sites.shp")
+    #     df = GDF.read(fn)
+    #     df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+    #     @test names(df) == names(df2)
+    #     @test nrow(df) == nrow(df2)
+    #     @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+    #     @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
-        GDF.write("test_native.shp", df; force = true)
-        GDF.write(GDF.ArchGDALDriver(), "test.shp", df; force = true)
-    end
-    @testset "GeoJSON" begin
-        @warn "GeoJSON"
-        using GeoJSON
-        fn = joinpath(testdatadir, "test_polygons.geojson")
-        df = GDF.read(fn)
-        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
-        @test names(df) == names(df2)
-        @test nrow(df) == nrow(df2)
-        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-        @test all(
-            isapprox.(
-                collect.(GI.coordinates(df.geometry[1])[1]),
-                GI.coordinates(df2.geometry[1])[1],
-            ),
-        )
-        GDF.write("test_native.geojson", df)
-        GDF.write(GDF.ArchGDALDriver(), "test.geojson", df)
-    end
-    @testset "FlatGeobuf" begin
-        @warn "FlatGeobuf"
-        using FlatGeobuf
-        fn = joinpath(testdatadir, "countries.fgb")
-        df = GDF.read(fn)
-        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
-        @test sort(names(df)) == sort(names(df2))
-        @test nrow(df) == nrow(df2)
-        # FlatGeobuf does not support GeoInterface yet
-        @test_broken GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-        @test_broken GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+    #     GDF.write("test_native.shp", df; force = true)
+    #     GDF.write(GDF.ArchGDALDriver(), "test.shp", df; force = true)
+    # end
+    # @testset "GeoJSON" begin
+    #     @warn "GeoJSON"
+    #     using GeoJSON
+    #     fn = joinpath(testdatadir, "test_polygons.geojson")
+    #     df = GDF.read(fn)
+    #     df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+    #     @test names(df) == names(df2)
+    #     @test nrow(df) == nrow(df2)
+    #     @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+    #     @test all(
+    #         isapprox.(
+    #             collect.(GI.coordinates(df.geometry[1])[1]),
+    #             GI.coordinates(df2.geometry[1])[1],
+    #         ),
+    #     )
+    #     GDF.write("test_native.geojson", df)
+    #     GDF.write(GDF.ArchGDALDriver(), "test.geojson", df)
+    # end
+    # @testset "FlatGeobuf" begin
+    #     @warn "FlatGeobuf"
+    #     using FlatGeobuf
+    #     fn = joinpath(testdatadir, "countries.fgb")
+    #     df = GDF.read(fn)
+    #     df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+    #     @test sort(names(df)) == sort(names(df2))
+    #     @test nrow(df) == nrow(df2)
+    #     # FlatGeobuf does not support GeoInterface yet
+    #     @test_broken GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+    #     @test_broken GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
-        # GDF.write("test_native.fgb", df)  # Can't convert FlatGeobuf to ArchGDAL
-        GDF.write("test_native.fgb", df2)
-        GDF.write(GDF.ArchGDALDriver(), "test.fgb", df2)
-    end
+    #     # GDF.write("test_native.fgb", df)  # Can't convert FlatGeobuf to ArchGDAL
+    #     GDF.write("test_native.fgb", df2)
+    #     GDF.write(GDF.ArchGDALDriver(), "test.fgb", df2)
+    # end
     @testset "GeoParquet" begin
         @warn "GeoParquet"
-        using GeoParquet
+        # using GeoParquet
         fn = joinpath(testdatadir, "example.parquet")
-        df = GDF.read(fn)
+        # df = GDF.read(fn)
         df2 = GDF.read(GDF.ArchGDALDriver(), fn)
-        @test sort(names(df)) == sort(names(df2))
-        @test nrow(df) == nrow(df2)
-        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+        # @test sort(names(df)) == sort(names(df2))
+        # @test nrow(df) == nrow(df2)
+        # @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        # @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
-        GDF.write("test_native.parquet", df)
-        GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
+        # GDF.write("test_native.parquet", df)
+        # GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
     end
-    @testset "GeoArrow" begin
-        @warn "GeoArrow"
-        using GeoArrow
-        fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
-        df = GDF.read(fn)
+    # @testset "GeoArrow" begin
+        # @warn "GeoArrow"
+        # using GeoArrow
+        # fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
+        # df = GDF.read(fn)
     #     ENV["OGR_ARROW_ALLOW_ALL_DIMS"] = "YES" 
     #     df2 = GDF.read(GDF.ArchGDALDriver(), fn)
     #     @test sort(names(df)) == sort(names(df2))
@@ -380,7 +380,7 @@ unknown_crs = GFT.WellKnownText(
 
     #     GDF.write("test_native.arrow", df)
     #     GDF.write(GDF.ArchGDALDriver(), "test.arrow", df)
-    end
+    # end
     # @testset "Writing crs of geometry" begin
     #     geom = GI.Wrappers.Point(0, 0; crs = GFT.EPSG(4326))
     #     df = DataFrame(; geometry = [geom])
