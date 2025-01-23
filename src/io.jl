@@ -56,7 +56,7 @@ function read(fn; kwargs...)
 end
 
 function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
-    @info "Using GDAL for reading, import $(package(driver)) for a native driver."
+    @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
     read(ArchGDALDriver(), fn; kwargs...)
 end
 
@@ -125,7 +125,7 @@ function write(fn::AbstractString, table; kwargs...)
 end
 
 function write(driver::AbstractDriver, fn::AbstractString, table; kwargs...)
-    @info "Using GDAL for writing, import $(package(driver)) for a native driver."
+    @debug "Using GDAL for writing, import $(package(driver)) for a native driver."
     write(ArchGDALDriver(), fn, table; kwargs...)
 end
 

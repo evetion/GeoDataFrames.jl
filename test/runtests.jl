@@ -350,6 +350,7 @@ unknown_crs = GFT.WellKnownText(
         GDF.write(GDF.ArchGDALDriver(), "test.fgb", df2)
     end
     @testset "GeoParquet" begin
+        Sys.iswindows() && return  # Skip on Windows. See GDAL.jl#146
         using GeoParquet
         fn = joinpath(testdatadir, "example.parquet")
         df = GDF.read(fn)
