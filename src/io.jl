@@ -43,11 +43,9 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
 )
 
 """
-    read(fn::AbstractString; kwargs...)
-    read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
+    read(fn::AbstractString; layer::Union{Integer,AbstractString}, kwargs...)
 
-Read a file into a DataFrame. Any kwargs are passed onto ArchGDAL [here](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}).
-By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
+Read a file into a DataFrame. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
 """
 function read(fn; kwargs...)
     ext = last(splitext(fn))
@@ -55,11 +53,29 @@ function read(fn; kwargs...)
     read(dr, fn; kwargs...)
 end
 
+@deprecate read(fn::AbstractString, layer::Union{AbstractString, Integer}; kwargs...) read(
+    fn;
+    layer,
+    kwargs...,
+)
+
+"""
+    read(driver::AbstractDriver, fn::AbstractString; kwargs...)
+
+Read a file into a DataFrame using the specified driver. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+"""
 function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
     @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
     read(ArchGDALDriver(), fn; kwargs...)
 end
 
+"""
+    read(driver::ArchGDALDriver, fn::AbstractString; layer::Union{Integer,AbstractString}, kwargs...)
+
+Read a file into a DataFrame using the ArchGDAL driver.
+By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
+Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
+"""
 function read(driver::ArchGDALDriver, fn::AbstractString; layer=nothing, kwargs...)
     startswith(fn, "/vsi") ||
         occursin(":", fn) ||
@@ -115,20 +131,30 @@ function read(::ArchGDALDriver, ds, layer)
 end
 
 """
-    write(fn::AbstractString, table; layer_name="data", crs::Union{GFT.GeoFormat,Nothing}=crs(table), driver::Union{Nothing,AbstractString}=nothing, options::Vector{AbstractString}=[], geom_columns::Set{Symbol}=(:geometry))
+    write(fn::AbstractString, table; kwargs...)
 
-Write the provided `table` to `fn`. The `geom_column` is expected to hold ArchGDAL geometries.
+Write the provided `table` to `fn`. A driver is selected based on the extension of `fn`.
 """
 function write(fn::AbstractString, table; kwargs...)
     ext = last(splitext(fn))
     write(driver(ext), fn, table; kwargs...)
 end
 
+"""
+    write(driver::AbstractDriver, fn::AbstractString, table; kwargs...)
+
+Write the provided `table` to `fn` using the specified driver. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+"""
 function write(driver::AbstractDriver, fn::AbstractString, table; kwargs...)
     @debug "Using GDAL for writing, import $(package(driver)) for a native driver."
     write(ArchGDALDriver(), fn, table; kwargs...)
 end
 
+"""
+    write(driver::ArchGDALDriver, fn::AbstractString, table; layer_name="data", crs::Union{GFT.GeoFormat,Nothing}=getcrs(table), driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict(), geom_columns::Tuple{Symbol}=getgeometrycolumns(table), kwargs...)
+
+Write the provided `table` to `fn` using the ArchGDAL driver.
+"""
 function write(
     ::ArchGDALDriver,
     fn::AbstractString,

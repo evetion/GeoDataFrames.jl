@@ -156,4 +156,3 @@ function reproject(sv::AbstractVector{<:AG.IGeometry}, from_crs, to_crs)
     AG.reproject.(sv, Ref(from_crs), Ref(to_crs))
 end
 
-export reproject, reproject!

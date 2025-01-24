@@ -1,10 +1,28 @@
 abstract type AbstractDriver end
 
+"""
+GeoJSON driver
+"""
 struct GeoJSONDriver <: AbstractDriver end
+"""
+Shapefile driver
+"""
 struct ShapefileDriver <: AbstractDriver end
+"""
+GeoParquet driver
+"""
 struct GeoParquetDriver <: AbstractDriver end
+"""
+FlatGeobuf driver
+"""
 struct FlatGeobufDriver <: AbstractDriver end
+"""
+ArchGDAL driver (default)
+"""
 struct ArchGDALDriver <: AbstractDriver end
+"""
+GeoArrow driver
+"""
 struct GeoArrowDriver <: AbstractDriver end
 
 function driver(ext::AbstractString)
