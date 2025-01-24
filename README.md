@@ -68,5 +68,5 @@ to pass which column(s) contain geometries, or by defining `GeoInterface.geometr
 when enabled by the driver, can be provided in this way.
 ```julia
 table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
-GDF.write(tfn, table; geom_columns=(:geom,),)
+GDF.write(tfn, table; geom_columns=(:geometry,),)
 ```

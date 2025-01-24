@@ -35,18 +35,18 @@ df = GDF.read("test_points.shp")
 
 You can also specify the layer index or layer name in opening, useful if there are multiple layers:
 ```julia
-GDF.read("test_points.shp", 0)
-GDF.read("test_points.shp", "test_points")
+GDF.read("test_points.shp"; layer=0)
+GDF.read("test_points.shp"; layer="test_points")
 ```
 
-Any keywords arguments are passed on to the underlying ArchGDAL [`read`](https://yeesian.com/ArchGDAL.jl/dev/reference/#ArchGDAL.read-Tuple%7BAbstractString%7D) function:
+Any keywords arguments are passed on to the underlying driver, by default the ArchGDAL [`read`](https://yeesian.com/ArchGDAL.jl/dev/reference/#ArchGDAL.read-Tuple%7BAbstractString%7D) function:
 ```julia
 GDF.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM_COLUMNS=NO"])
 ```
 
 
 ## Writing
-Writing works by passing a filename and a `DataFrame` with a geometry column to the [`write`](@ref) function. The name of the column should be `:geom`, but can be set at write time by the keyword option `geom_column`.
+Writing works by passing a filename and a `DataFrame` with a geometry column to the [`write`](@ref) function. The name of the column should be `:geometry`, but can be set at write time by the keyword option `geom_column`.
 
 ```julia
 using DataFrames
@@ -83,5 +83,5 @@ to pass which column(s) contain geometries, or by defining `GeoInterface.geometr
 when enabled by the driver, can be provided in this way.
 ```julia
 table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
-GDF.write(tfn, table; geom_columns=(:geom,),)
+GDF.write(tfn, table; geom_columns=(:geometry,),)
 ```

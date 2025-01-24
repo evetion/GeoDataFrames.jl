@@ -14,20 +14,39 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
+[weakdeps]
+FlatGeobuf = "d985ece1-97de-4d33-914c-38fb84042e15"
+GeoArrow = "5bc3a8d9-1bfb-4624-ba94-a391279174d6"
+GeoJSON = "61d90e0f-e114-555e-ac52-39dfb47a3ef9"
+GeoParquet = "e99870d8-ce00-4fdd-aeee-e09192881159"
+Shapefile = "8e980c4a-a4fe-5da2-b3a7-4b4b0353a2f4"
+
+[extensions]
+GeoDataFramesFlatGeobufExt = "FlatGeobuf"
+GeoDataFramesGeoArrowExt = "GeoArrow"
+GeoDataFramesGeoJSONExt = "GeoJSON"
+GeoDataFramesGeoParquetExt = "GeoParquet"
+GeoDataFramesShapefileExt = "Shapefile"
+
 [compat]
 ArchGDAL = "0.10"
 DataAPI = "1.13"
 DataFrames = "1.4"
 Extents = "0.1"
+FlatGeobuf = "0.1.2"
+GeoArrow = "0.2"
 GeoFormatTypes = "0.3, 0.4"
 GeoInterface = "1.0.1"
+GeoJSON = "0.8.1"
+GeoParquet = "0.2.1"
 Reexport = "1.2"
+Shapefile = "0.13.1"
 Tables = "1"
-julia = "1.9"
+julia = "1.10"
 
 [extras]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "Dates"]
+test = ["Test", "Dates", "Shapefile", "GeoArrow", "GeoJSON", "GeoParquet", "FlatGeobuf"]

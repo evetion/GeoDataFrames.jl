@@ -7,8 +7,8 @@ function stringlist(dict::Dict{String, String})
 end
 
 function getgeometrycolumns(table)
-    if GeoInterface.isfeaturecollection(table)
-        return GeoInterface.geometrycolumns(table)
+    if GI.isfeaturecollection(table)
+        return GI.geometrycolumns(table)
     elseif first(DataAPI.metadatasupport(typeof(table)))
         gc = DataAPI.metadata(table, "GEOINTERFACE:geometrycolumns", nothing)
         if isnothing(gc) # fall back to searching for "geometrycolumns" as a string
@@ -21,8 +21,8 @@ function getgeometrycolumns(table)
 end
 
 function getcrs(table)
-    if GeoInterface.isfeaturecollection(table)
-        return GeoInterface.crs(table)
+    if GI.isfeaturecollection(table)
+        return GI.crs(table)
     end
     crs = geomcrs(table)
     if !isnothing(crs)
@@ -42,7 +42,7 @@ function geomcrs(table)
     rows = Tables.rows(table)
     geom_column = first(getgeometrycolumns(table))
     if hasproperty(first(rows), geom_column)
-        return GeoInterface.crs(getproperty(first(rows), geom_column))
+        return GI.crs(getproperty(first(rows), geom_column))
     else
         return nothing
     end
@@ -52,7 +52,7 @@ end
 
 # These are the basic metadata definitions from which all else follows.
 
-function GeoInterface.crs(table::DataFrame)
+function GI.crs(table::DataFrame)
     crs = DataAPI.metadata(table, "GEOINTERFACE:crs", nothing)
     if isnothing(crs) # fall back to searching for "crs" as a string
         crs = DataAPI.metadata(table, "crs", nothing)
@@ -60,7 +60,7 @@ function GeoInterface.crs(table::DataFrame)
     return crs
 end
 
-function GeoInterface.geometrycolumns(table::DataFrame)
+function GI.geometrycolumns(table::DataFrame)
     gc = DataAPI.metadata(table, "GEOINTERFACE:geometrycolumns", nothing)
     if isnothing(gc) # fall back to searching for "geometrycolumns" as a string
         gc = DataAPI.metadata(table, "geometrycolumns", (:geometry,))
@@ -75,29 +75,32 @@ end
 # feature interface, for use in generic code.  And dispatch can always
 # handle a DataFrame by fixing the trait in a specialized method.
 
+# GI.isfeaturecollection(::Type{<:DataFrame}) = true
+
 # Here, we define a feature as a DataFrame row.
-function GeoInterface.getfeature(df::DataFrame, i::Integer)
+function GI.getfeature(df::DataFrame, i::Integer)
     return view(df, i, :)
 end
 # This is simply an optimized method, since we know what we have to do already.
-GeoInterface.getfeature(df::DataFrame) = eachrow(df)
+GI.getfeature(df::DataFrame) = eachrow(df)
 
+# GI.isfeature(::Type{<:DataFrameRow}) = true
 # The geometry is defined as the first of the geometry columns.
 # TODO: how should we choose between the geometry columns?
-function GeoInterface.geometry(row::DataFrameRow)
-    return row[first(GeoInterface.geometrycolumns(row))]
+function GI.geometry(row::DataFrameRow)
+    return row[first(GI.geometrycolumns(row))]
 end
 
 # The properties are all other columns.
-function GeoInterface.properties(row::DataFrameRow)
-    return row[DataFrames.Not(first(GeoInterface.geometrycolumns(row)))]
+function GI.properties(row::DataFrameRow)
+    return row[DataFrames.Not(first(GI.geometrycolumns(row)))]
 end
 
 # Since `DataFrameRow` is simply a view of a DataFrame, we can reach back 
 # to the original DataFrame to get the metadata.
-GeoInterface.geometrycolumns(row::DataFrameRow) =
-    GeoInterface.geometrycolumns(getfield(row, :df)) # get the parent of the row view
-GeoInterface.crs(row::DataFrameRow) = GeoInterface.crs(getfield(row, :df)) # get the parent of the row view
+GI.geometrycolumns(row::DataFrameRow) =
+    GI.geometrycolumns(getfield(row, :df)) # get the parent of the row view
+GI.crs(row::DataFrameRow) = GI.crs(getfield(row, :df)) # get the parent of the row view
 
 """
     reproject(df::DataFrame, to_crs)
@@ -146,11 +149,10 @@ end
 
 function reproject(sv::AbstractVector{<:AG.IGeometry}, from_crs, to_crs)
     Base.depwarn(
-        "`reproject(sv::AbstractVector)` will be deprecated in a future release." *
+        "`reproject(sv::AbstractVector)` will be deprecated in a future release. " *
         "Please use `reproject(df::DataFrame)` instead to make sure the dataframe crs metadata is updated.",
         :reproject,
     )
     AG.reproject.(sv, Ref(from_crs), Ref(to_crs))
 end
 
-export reproject, reproject!

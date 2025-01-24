@@ -15,33 +15,48 @@ REPO_URL = "https://github.com/yeesian/ArchGDALDatasets/blob/master/"
 
 remotefiles = [
     (
-        "ospy/data1/sites.dbf",
+        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.dbf?raw=true",
         "7df95edea06c46418287ae3430887f44f9116b29715783f7d1a11b2b931d6e7d",
     ),
     (
-        "ospy/data1/sites.prj",
+        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.prj?raw=true",
         "81fb1a246728609a446b25b0df9ede41c3e7b6a133ce78f10edbd2647fc38ce1",
     ),
     (
-        "ospy/data1/sites.sbn",
+        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.sbn?raw=true",
         "198d9d695f3e7a0a0ac0ebfd6afbe044b78db3e685fffd241a32396e8b341ed3",
     ),
     (
-        "ospy/data1/sites.sbx",
+        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.sbx?raw=true",
         "49bbe1942b899d52cf1d1b01ea10bd481ec40bdc4c94ff866aece5e81f2261f6",
     ),
     (
-        "ospy/data1/sites.shp",
+        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.shp?raw=true",
         "69af5a6184053f0b71f266dc54c944f1ec02013fb66dbb33412d8b1976d5ea2b",
     ),
     (
-        "ospy/data1/sites.shx",
+        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.shx?raw=true",
         "1f3da459ccb151958743171e41e6a01810b2a007305d55666e01d680da7bbf08",
     ),
+    (
+        "https://github.com/opengeospatial/geoparquet/raw/v1.0.0/examples/example.parquet",
+        "3dc1a3df76290cc62aa6d7aa6aa00d0988b3157ee77a042167b3f8302d05aa6c",
+    ),
+    (
+        "https://raw.githubusercontent.com/geoarrow/geoarrow-data/v0.1.0/example/example-multipolygon_z.arrow",
+        "0cd4d7c5611581a5ae30fbbacc6f733a7da2ae78ac02ef8cffeb1e2d4f39b91c",
+    ),
+    (
+        "https://storage.googleapis.com/open-geodata/linz-examples/nz-buildings-outlines.parquet",
+        "b64389237b9879c275aec4e47f0e6be8fdd5d64437a05aef10839f574efc5dbc",
+    ),
+    (
+        "https://github.com/bjornharrtell/flatgeobuf/blob/master/test/data/countries.fgb?raw=true",
+        "d8dc3baf855320d10c6a662bf1171273849dd8a0935066b5b7b8dd83b3484cb3",
+    ),
 ]
-for (f, sha) in remotefiles
-    localfn = joinpath(testdatadir, basename(f))
-    url = REPO_URL * f * "?raw=true"
+for (url, sha) in remotefiles
+    localfn = joinpath(testdatadir, basename(replace(url, "?raw=true" => "")))
     PlatformEngines.download_verify(url, sha, localfn; force = true, quiet_download = false)
 end
 
@@ -289,6 +304,79 @@ unknown_crs = GFT.WellKnownText(
         @test_throws ErrorException("Unable to open $wfn.") GDF.read(wfn)
     end
 
+    @testset "Shapefile" begin
+        using Shapefile
+        fn = joinpath(testdatadir, "sites.shp")
+        df = GDF.read(fn)
+        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+        @test names(df) == names(df2)
+        @test nrow(df) == nrow(df2)
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+
+        GDF.write("test_native.shp", df; force = true)
+        GDF.write(GDF.ArchGDALDriver(), "test.shp", df; force = true)
+    end
+    @testset "GeoJSON" begin
+        using GeoJSON
+        fn = joinpath(testdatadir, "test_polygons.geojson")
+        df = GDF.read(fn)
+        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+        @test names(df) == names(df2)
+        @test nrow(df) == nrow(df2)
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        @test all(
+            isapprox.(
+                collect.(GI.coordinates(df.geometry[1])[1]),
+                GI.coordinates(df2.geometry[1])[1],
+            ),
+        )
+        GDF.write("test_native.geojson", df)
+        GDF.write(GDF.ArchGDALDriver(), "test.geojson", df)
+    end
+    @testset "FlatGeobuf" begin
+        using FlatGeobuf
+        fn = joinpath(testdatadir, "countries.fgb")
+        df = GDF.read(fn)
+        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+        @test sort(names(df)) == sort(names(df2))
+        @test nrow(df) == nrow(df2)
+        # FlatGeobuf does not support GeoInterface yet
+        @test_broken GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        @test_broken GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+
+        # GDF.write("test_native.fgb", df)  # Can't convert FlatGeobuf to ArchGDAL
+        GDF.write("test_native.fgb", df2)
+        GDF.write(GDF.ArchGDALDriver(), "test.fgb", df2)
+    end
+    @testset "GeoParquet" begin
+        Sys.iswindows() && return  # Skip on Windows. See GDAL.jl#146
+        using GeoParquet
+        fn = joinpath(testdatadir, "example.parquet")
+        df = GDF.read(fn)
+        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+        @test sort(names(df)) == sort(names(df2))
+        @test nrow(df) == nrow(df2)
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+
+        GDF.write("test_native.parquet", df)
+        GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
+    end
+    @testset "GeoArrow" begin
+        using GeoArrow
+        fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
+        df = GDF.read(fn)
+        ENV["OGR_ARROW_ALLOW_ALL_DIMS"] = "YES" 
+        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+        @test sort(names(df)) == sort(names(df2))
+        @test nrow(df) == nrow(df2)
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+
+        GDF.write("test_native.arrow", df)
+        GDF.write(GDF.ArchGDALDriver(), "test.arrow", df)
+    end
     @testset "Writing crs of geometry" begin
         geom = GI.Wrappers.Point(0, 0; crs = GFT.EPSG(4326))
         df = DataFrame(; geometry = [geom])
