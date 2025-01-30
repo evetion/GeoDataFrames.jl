@@ -8,6 +8,7 @@ import GeoInterface as GI
 using DataAPI
 using Reexport
 
+include("vector.jl")
 include("exports.jl")
 include("drivers.jl")
 include("io.jl")
