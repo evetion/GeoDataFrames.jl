@@ -3,7 +3,7 @@
 @reexport using GeoInterface: boundary, convexhull, buffer
 @reexport using GeoInterface: intersection, union, difference, symdifference, distance
 @reexport using GeoInterface: area, centroid
-@reexport using GeoInterface: isvalid, issimple, isring, geomarea, centroid
+@reexport using GeoInterface: isvalid, issimple, isring, centroid
 # @reexport using GeoInterface:
 #     createpoint,
 #     createlinestring,
