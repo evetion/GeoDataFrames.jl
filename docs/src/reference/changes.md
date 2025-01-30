@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add new driver framework to read files using native drivers.
 - Added native driver package extensions on GeoJSON, ShapeFile, GeoParquet, GeoArrow and FlatGeobuf.
 - Geometry columns are now wrapped in a GeometryVector, allowing for future improvements.
+- Now exports GeoInterface methods instead of ArchGDAL methods for geometry operation.
 
 ## v0.3.11
 - Changed `reproject` to work on a DataFrame, correctly setting the (crs) metadata

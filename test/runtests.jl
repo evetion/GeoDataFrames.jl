@@ -196,10 +196,10 @@ unknown_crs = GFT.WellKnownText(
     end
 
     @testset "Spatial operations" begin
-        table = DataFrame(; geometry = AG.createpoint.(coords), name = "test")
+        table = DataFrame(; geometry = GDF.GeometryVector(AG.createpoint.(coords)), name = "test")
 
         # Buffer to also write polygons
-        table.geometry = AG.buffer(table.geometry, 10)
+        table.geometry = GDF.buffer(table.geometry, 10)
         GDF.write(joinpath(testdatadir, "test_polygons.shp"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.gpkg"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.geojson"), table)
