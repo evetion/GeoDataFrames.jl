@@ -50,7 +50,11 @@ Read a file into a DataFrame. Any kwargs are passed to the driver, by default se
 function read(fn; kwargs...)
     ext = last(splitext(fn))
     dr = driver(ext)
-    read(dr, fn; kwargs...)
+    df = read(dr, fn; kwargs...)
+    for geom in getgeometrycolumns(df)
+        df[!, geom] = GeometryVector(df[!, geom])
+    end
+    df
 end
 
 @deprecate read(fn::AbstractString, layer::Union{AbstractString, Integer}; kwargs...) read(
@@ -92,12 +96,6 @@ function read(driver::ArchGDALDriver, fn::AbstractString; layer=nothing, kwargs.
     end
     return t
 end
-
-@deprecate read(fn::AbstractString, layer::Union{AbstractString, Integer}; kwargs...) read(
-    fn;
-    layer,
-    kwargs...,
-)
 
 function read(::ArchGDALDriver, ds, layer)
     df, gnames, sr = AG.getlayer(ds, layer) do table
