@@ -196,7 +196,10 @@ unknown_crs = GFT.WellKnownText(
     end
 
     @testset "Spatial operations" begin
-        table = DataFrame(; geometry = GDF.GeometryVector(AG.createpoint.(coords)), name = "test")
+        table = DataFrame(;
+            geometry = GDF.GeometryVector(AG.createpoint.(coords)),
+            name = "test",
+        )
 
         # Buffer to also write polygons
         table.geometry = GDF.buffer(table.geometry, 10)
@@ -206,11 +209,15 @@ unknown_crs = GFT.WellKnownText(
     end
 
     @testset "Reproject" begin
-        table = DataFrame(; geometry = AG.createpoint.([[0, 0, 0]]), name = "test")
+        table = DataFrame(; geometry = AG.createpoint.([[52, 4, 0]]), name = "test")
         geoms = GDF.reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
         ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992))
-        @test GDF.AG.getpoint(geoms[1], 0)[1] ≈ -587791.596556932
-        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ -587791.596556932
+        @test GDF.AG.getpoint(geoms[1], 0)[1] ≈ 59742.01980968987
+        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ 59742.01980968987
+
+        table = DataFrame(; geometry = AG.createpoint.([[4, 52, 0]]), name = "test")
+        ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992); always_xy = true)
+        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ 59742.01980968987
         GDF.write(
             joinpath(testdatadir, "test_reprojection.gpkg"),
             table;
@@ -367,7 +374,7 @@ unknown_crs = GFT.WellKnownText(
         using GeoArrow
         fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
         df = GDF.read(fn)
-        ENV["OGR_ARROW_ALLOW_ALL_DIMS"] = "YES" 
+        ENV["OGR_ARROW_ALLOW_ALL_DIMS"] = "YES"
         df2 = GDF.read(GDF.ArchGDALDriver(), fn)
         @test sort(names(df)) == sort(names(df2))
         @test nrow(df) == nrow(df2)

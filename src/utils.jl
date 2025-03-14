@@ -98,61 +98,61 @@ end
 
 # Since `DataFrameRow` is simply a view of a DataFrame, we can reach back 
 # to the original DataFrame to get the metadata.
-GI.geometrycolumns(row::DataFrameRow) =
-    GI.geometrycolumns(getfield(row, :df)) # get the parent of the row view
+GI.geometrycolumns(row::DataFrameRow) = GI.geometrycolumns(getfield(row, :df)) # get the parent of the row view
 GI.crs(row::DataFrameRow) = GI.crs(getfield(row, :df)) # get the parent of the row view
 
 """
-    reproject(df::DataFrame, to_crs)
+    reproject(df::DataFrame, to_crs; [always_xy=false])
 
 Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `to_crs`, from the current CRS.
 See also [`reproject(df, from_crs, to_crs)`](@ref) and the in place version [`reproject!(df, to_crs)`](@ref).
+`always_xy` (`false` by default) can override the default axis mapping strategy of the CRS. If true, input is 
+assumed to be in the traditional GIS order (longitude, latitude).
 """
-function reproject(df::DataFrame, to_crs)
-    reproject!(copy(df), to_crs)
+function reproject(df::DataFrame, to_crs; always_xy = false)
+    reproject!(copy(df), to_crs; always_xy)
 end
 
 """
-    reproject(df::DataFrame, from_crs, to_crs)
+    reproject(df::DataFrame, from_crs, to_crs; [always_xy=false])
 
 Reproject the geometries in a DataFrame `df` from the crs `from_crs` to a new crs `to_crs`.
 This overrides any current CRS of the Dataframe.
 """
-function reproject(df::DataFrame, from_crs, to_crs)
-    reproject!(copy(df), from_crs, to_crs)
+function reproject(df::DataFrame, from_crs, to_crs; always_xy = false)
+    reproject!(copy(df), from_crs, to_crs; always_xy)
 end
 
 """
-    reproject!(df::DataFrame, to_crs)
+    reproject!(df::DataFrame, to_crs; [always_xy=false])
 
 Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `to_crs`, from the current CRS, in place.
 """
-function reproject!(df::DataFrame, to_crs)
-    reproject!(df, getcrs(df), to_crs)
+function reproject!(df::DataFrame, to_crs; always_xy = false)
+    reproject!(df, getcrs(df), to_crs; always_xy)
 end
 
 """
-    reproject!(df::DataFrame, from_crs, to_crs)
+    reproject!(df::DataFrame, from_crs, to_crs; [always_xy=false])
 
 Reproject the geometries in a DataFrame `df` from the crs `from_crs` to a new crs `to_crs` in place.
 This overrides any current CRS of the Dataframe.
 """
-function reproject!(df::DataFrame, from_crs, to_crs)
+function reproject!(df::DataFrame, from_crs, to_crs; always_xy = false)
     columns = Tables.columns(df)
     for gc in getgeometrycolumns(df)
         gc in Tables.columnnames(columns) || continue
-        reproject(df[!, gc], from_crs, to_crs)
+        reproject(df[!, gc], from_crs, to_crs; always_xy)
     end
     metadata!(df, "crs", to_crs; style = :note)
     metadata!(df, "GEOINTERFACE:crs", to_crs; style = :note)
 end
 
-function reproject(sv::AbstractVector{<:AG.IGeometry}, from_crs, to_crs)
+function reproject(sv::AbstractVector{<:AG.IGeometry}, from_crs, to_crs; always_xy = false)
     Base.depwarn(
         "`reproject(sv::AbstractVector)` will be deprecated in a future release. " *
         "Please use `reproject(df::DataFrame)` instead to make sure the dataframe crs metadata is updated.",
         :reproject,
     )
-    AG.reproject.(sv, Ref(from_crs), Ref(to_crs))
+    AG.reproject.(sv, Ref(from_crs), Ref(to_crs); order = always_xy ? :trad : :compliant)
 end
-
