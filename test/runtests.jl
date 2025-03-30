@@ -304,4 +304,27 @@ unknown_crs = GFT.WellKnownText(
             "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]",
         )
     end
+    @testset "Update geopackage" begin
+        t = DataFrame(; geometry = AG.createpoint.(coords), name = ["test", "test2"])
+        GDF.write(joinpath(testdatadir, "test_update.gpkg"), t; layer_name = "test")
+        GDF.write(
+            joinpath(testdatadir, "test_update.gpkg"),
+            t;
+            layer_name = "test2",
+            update = true,
+        )
+        @test GDF.read(joinpath(testdatadir, "test_update.gpkg"); layer = "test") ==
+              GDF.read(joinpath(testdatadir, "test_update.gpkg"); layer = "test2")
+        @test_throws AG.GDAL.GDALError GDF.write(
+            joinpath(testdatadir, "test_update.gpkg"),
+            t;
+            layer_name = "test2",
+            update = true,
+        )
+        @test_throws ErrorException("Can't update non-existent file.") GDF.write(
+            joinpath(testdatadir, "test_update2.gpkg"),
+            t;
+            update = true,
+        )
+    end
 end

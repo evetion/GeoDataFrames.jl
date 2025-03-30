@@ -43,39 +43,30 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
 )
 
 """
-    read(fn::AbstractString; kwargs...)
-    read(fn::AbstractString, layer::Union{Integer,AbstractString}; kwargs...)
+    read(fn::AbstractString; layer::Union{Integer,AbstractString}; kwargs...)
 
 Read a file into a DataFrame. Any kwargs are passed onto ArchGDAL [here](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}).
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 """
-function read(fn::AbstractString; kwargs...)
-    startswith(fn, "/vsi") ||
-        occursin(":", fn) ||
-        isfile(fn) ||
-        isdir(fn) ||
-        error("File not found.")
+function read(fn::AbstractString; layer = nothing, kwargs...)
+    _isvalidlocal(fn) || error("File not found.")
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
-        if AG.nlayer(ds) > 1
+        _layer = isnothing(layer) ? 0 : layer
+        if isnothing(layer) && AG.nlayer(ds) > 1
             @warn "This file has multiple layers, you only get the first layer by default now."
         end
-        return read(ds, 0)
+        isnothing(layer) || (_layer = layer)
+        return read(ds, _layer)
     end
     return t
 end
 
-function read(fn::AbstractString, layer::Union{Integer, AbstractString}; kwargs...)
-    startswith(fn, "/vsi") ||
-        occursin(":", fn) ||
-        isfile(fn) ||
-        isdir(fn) ||
-        error("File not found.")
-    t = AG.read(fn; kwargs...) do ds
-        return read(ds, layer)
-    end
-    return t
-end
+@deprecate read(fn::AbstractString, layer::Union{AbstractString, Integer}; kwargs...) read(
+    fn;
+    layer,
+    kwargs...,
+)
 
 function read(ds, layer)
     df, gnames, sr = AG.getlayer(ds, layer) do table
@@ -119,6 +110,7 @@ function write(
     options::Dict{String, String} = Dict{String, String}(),
     geom_columns = getgeometrycolumns(table),
     chunksize = 20_000,
+    update = false,
     kwargs...,
 )
     rows = Tables.rows(table)
@@ -170,7 +162,15 @@ function write(
             push!(fields, (Symbol(name), nmtype))
         end
     end
-    AG.create(fn; driver = driver) do ds
+    if update
+        _isvalidlocal(fn) || error("Can't update non-existent file.")
+        f = AG.read
+        ckwargs = (; flags = AG.OF_UPDATE)
+    else
+        f = AG.create
+        ckwargs = (; driver)
+    end
+    f(fn; ckwargs...) do ds
         AG.newspatialref() do spatialref
             if isnothing(crs)
                 crs = GFT.WellKnownText2(

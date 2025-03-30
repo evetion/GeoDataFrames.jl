@@ -155,4 +155,8 @@ function reproject(sv::AbstractVector{<:AG.IGeometry}, from_crs, to_crs; always_
     AG.reproject.(sv, Ref(from_crs), Ref(to_crs); order = always_xy ? :trad : :compliant)
 end
 
+function _isvalidlocal(fn)
+    startswith(fn, "/vsi") || occursin(":", fn) || isfile(fn) || isdir(fn)
+end
+
 export reproject, reproject!
