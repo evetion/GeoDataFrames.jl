@@ -81,12 +81,7 @@ By default you only get the first layer, unless you specify either the index (0 
 Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
 """
 function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwargs...)
-    startswith(fn, "/vsi") ||
-        occursin(":", fn) ||
-        isfile(fn) ||
-        isdir(fn) ||
-        error("File not found.")
-
+    _isvalidlocal(fn) || error("File not found.")
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
         if AG.nlayer(ds) > 1 && isnothing(layer)
@@ -217,12 +212,7 @@ function write(
         end
     end
     if update
-        startswith(fn, "/vsi") ||
-            occursin(":", fn) ||
-            isfile(fn) ||
-            isdir(fn) ||
-            error("Can't update non-existent file.")
-
+        _isvalidlocal(fn) || error("Can't update non-existent file.")
         f = AG.read
         ckwargs = (; flags = AG.OF_UPDATE)
     else
