@@ -290,7 +290,7 @@ unknown_crs = GFT.WellKnownText(
 
     @testset "Non existing Windows path #78" begin
         wfn = "C:\\non_existing_folder\\non_existing_file.shp"
-        @test_throws ErrorException("Unable to open $wfn.") GDF.read(wfn)
+        @test_throws ErrorException("File not found.") GDF.read(wfn)
     end
 
     @testset "Writing crs of geometry" begin

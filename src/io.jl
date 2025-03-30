@@ -171,6 +171,7 @@ function write(
         ckwargs = (; driver)
     end
     f(fn; ckwargs...) do ds
+        ds.ptr == C_NULL && error("Unable to write to $fn.")
         AG.newspatialref() do spatialref
             if isnothing(crs)
                 crs = GFT.WellKnownText2(

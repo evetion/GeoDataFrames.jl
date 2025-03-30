@@ -156,7 +156,7 @@ function reproject(sv::AbstractVector{<:AG.IGeometry}, from_crs, to_crs; always_
 end
 
 function _isvalidlocal(fn)
-    startswith(fn, "/vsi") || occursin(":", fn) || isfile(fn) || isdir(fn)
+    startswith(fn, "/vsi") || occursin(":", fn[3:end]) || isfile(fn) || isdir(fn)
 end
 
 export reproject, reproject!
