@@ -80,13 +80,8 @@ Read a file into a DataFrame using the ArchGDAL driver.
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
 """
-function read(driver::ArchGDALDriver, fn::AbstractString; layer=nothing, kwargs...)
-    startswith(fn, "/vsi") ||
-        occursin(":", fn) ||
-        isfile(fn) ||
-        isdir(fn) ||
-        error("File not found.")
-
+function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwargs...)
+    _isvalidlocal(fn) || error("File not found.")
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
         if AG.nlayer(ds) > 1 && isnothing(layer)
@@ -163,6 +158,7 @@ function write(
     options::Dict{String, String} = Dict{String, String}(),
     geom_columns = getgeometrycolumns(table),
     chunksize = 20_000,
+    update = false,
     kwargs...,
 )
     rows = Tables.rows(table)
@@ -215,7 +211,15 @@ function write(
             push!(fields, (Symbol(name), nmtype))
         end
     end
-    AG.create(fn; driver = driver) do ds
+    if update
+        _isvalidlocal(fn) || error("Can't update non-existent file.")
+        f = AG.read
+        ckwargs = (; flags = AG.OF_UPDATE)
+    else
+        f = AG.create
+        ckwargs = (; driver)
+    end
+    f(fn; ckwargs...) do ds
         AG.newspatialref() do spatialref
             if isnothing(crs)
                 crs = GFT.WellKnownText2(
