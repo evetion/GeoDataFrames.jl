@@ -61,6 +61,16 @@ You can also set options such as the layer_name, coordinate reference system.
 GDF.write("test_points.shp", df; layer_name="data", crs=EPSG(4326))
 ```
 
+You can also update existing geopackage files by adding new layers. Set the `update=true` option and provide a unique `layer_name`:
+```julia
+GDF.write("test.gpkg", df; layer_name="foo", update=true)
+```
+
+To overwrite an existing layer, either use a new layer name or pass `"OVERWRITE"=>"YES"` in the options:
+```julia
+GDF.write("test.gpkg", df; layer_name="existing_layer", update=true, options=Dict("OVERWRITE"=>"YES"))
+```
+
 The most common file extensions are recognized, but you can override this or write uncommon files by setting the driver option. See [here](https://gdal.org/drivers/vector/index.html) for a list of (short) driver names.
 ```julia
 GDF.write("test_points.fgb", df; driver="FlatGeobuf", options=Dict("SPATIAL_INDEX"=>"YES"))
