@@ -174,9 +174,7 @@ version = "1.8.0"
 
 [[deps.DocumenterVitepress]]
 deps = ["ANSIColoredPrinters", "Base64", "DocStringExtensions", "Documenter", "IOCapture", "Markdown", "NodeJS_20_jll", "REPL"]
-git-tree-sha1 = "17e11240cb54672023a9dd0f8c963e5ed9956526"
-repo-rev = "master"
-repo-url = "https://github.com/evetion/DocumenterVitepress.jl.git"
+git-tree-sha1 = "0ebb20995e28baa1adda28b758f31a826702b5fe"
 uuid = "4710194d-e776-4893-9690-8d956a29c365"
 version = "0.1.12"
 
