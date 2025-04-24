@@ -1,3 +1,4 @@
+.vscode
 docs/build/
 docs/src/*.png
 *.gpkg
@@ -12,5 +13,6 @@ docs/src/*.png
 .DS_Store
 Manifest.toml
 docs/final_site
+docs/Manifest.toml
 node_modules/
 test/data
