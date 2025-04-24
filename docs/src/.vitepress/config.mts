@@ -11,7 +11,7 @@ function getBaseRepository(base: string): string {
 }
 
 const baseTemp = {
-  base: 'REPLACE_ME_DOCUMENTER_VITEPRESS',// TODO: replace this in makedocs!
+  base: '/GeoDataFrames.jl/',// TODO: replace this in makedocs!
 }
 
 const navTemp = {
