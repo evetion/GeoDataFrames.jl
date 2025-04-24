@@ -13,7 +13,7 @@ makedocs(;
     sitename = "GeoDataFrames.jl",
     format = MarkdownVitepress(;
         repo = "github.com/evetion/GeoDataFrames.jl",
-        deploy_url = "https://www.evetion.nl/GeoDataFrames.jl"
+        # deploy_url = "https://www.evetion.nl/GeoDataFrames.jl"
         ),
     pages = [
         "Home" => "index.md",
