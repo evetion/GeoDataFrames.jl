@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.4"
+julia_version = "1.11.5"
 manifest_format = "2.0"
 project_hash = "1b068006cc62b0c7cf88d51d0bce6acfe7784403"
 
@@ -174,9 +174,11 @@ version = "1.8.0"
 
 [[deps.DocumenterVitepress]]
 deps = ["ANSIColoredPrinters", "Base64", "DocStringExtensions", "Documenter", "IOCapture", "Markdown", "NodeJS_20_jll", "REPL"]
-git-tree-sha1 = "aa210b5039870d3ad181877d99fd37618e94d29c"
+git-tree-sha1 = "17e11240cb54672023a9dd0f8c963e5ed9956526"
+repo-rev = "master"
+repo-url = "https://github.com/evetion/DocumenterVitepress.jl.git"
 uuid = "4710194d-e776-4893-9690-8d956a29c365"
-version = "0.1.3"
+version = "0.1.12"
 
     [deps.DocumenterVitepress.extensions]
     DocumenterVitepressDocumenterCitationsExt = "DocumenterCitations"

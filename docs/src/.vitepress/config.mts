@@ -34,8 +34,8 @@ export default defineConfig({
   outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
   head: [
     ['link', { rel: 'icon', href: 'favicon.ico' }],
-    // ['script', { src: `${getBaseRepository(baseTemp.base)}versions.js` }],
-    ['script', { src: '/GeoDataFrames.jl/versions.js' }], // for custom domains, I guess if deploy_url is available.
+    ['script', { src: `${getBaseRepository(baseTemp.base)}versions.js` }],
+    // ['script', { src: '/GeoDataFrames.jl/versions.js' }], // for custom domains, I guess if deploy_url is available.
     ['script', { src: `${baseTemp.base}siteinfo.js` }]
   ],
   ignoreDeadLinks: true,

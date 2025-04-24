@@ -12,10 +12,7 @@ makedocs(;
     authors = "Maarten Pronk <git@evetion.nl> and contributors",
     repo = Remotes.GitHub("evetion", "GeoDataFrames.jl"),
     sitename = "GeoDataFrames.jl",
-    format = MarkdownVitepress(;
-        repo = "https://github.com/evetion/GeoDataFrames.jl",
-        deploy_url = "https://evetion.nl/GeoDataFrames.jl",
-    ),
+    format = MarkdownVitepress(; repo = "https://github.com/evetion/GeoDataFrames.jl"),
     pages = [
         "Home" => "index.md",
         "Tutorials" => Any[
