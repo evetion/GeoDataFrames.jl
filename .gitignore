@@ -16,3 +16,4 @@ docs/final_site
 docs/Manifest.toml
 node_modules/
 test/data
+package-lock.json
