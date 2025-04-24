@@ -65,7 +65,7 @@ export default defineConfig({
     sidebar: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     editLink: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/evetion' },
+      { icon: 'github', link: 'https://github.com/evetion/GeoDataFrames.jl' },
       { icon: 'linkedin', link: 'https://www.linkedin.com/in/mjpronk/' },
       { icon: 'mastodon', link: 'https://fosstodon.org/@evetion' },
       { icon: 'twitter', link: 'https://twitter.com/3vetion' }
