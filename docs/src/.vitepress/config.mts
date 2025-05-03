@@ -2,6 +2,7 @@ import { defineConfig } from 'vitepress'
 import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
 import mathjax3 from "markdown-it-mathjax3";
 import footnote from "markdown-it-footnote";
+import path from 'path'
 
 function getBaseRepository(base: string): string {
   if (!base || base === '/') return '/';
@@ -34,11 +35,35 @@ export default defineConfig({
   outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
   head: [
     ['link', { rel: 'icon', href: 'favicon.ico' }],
-    ['script', { src: `${getBaseRepository(baseTemp.base)}versions.js` }],
-    // ['script', { src: '/GeoDataFrames.jl/versions.js' }], // for custom domains, I guess if deploy_url is available.
+    // ['script', { src: `${getBaseRepository(baseTemp.base)}versions.js` }],
+    ['script', { src: '/versions.js' }], // for custom domains, I guess if deploy_url is available.
     ['script', { src: `${baseTemp.base}siteinfo.js` }]
   ],
   ignoreDeadLinks: true,
+  vite: {
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '../components')
+      }
+    },
+    build: {
+      assetsInlineLimit: 0, // so we can tell whether we have created inlined images or not, we don't let vite inline them
+    },
+    optimizeDeps: {
+      exclude: [ 
+        '@nolebase/vitepress-plugin-enhanced-readabilities/client',
+        'vitepress',
+        '@nolebase/ui',
+      ], 
+    }, 
+    ssr: { 
+      noExternal: [ 
+        // If there are other packages that need to be processed by Vite, you can add them here.
+        '@nolebase/vitepress-plugin-enhanced-readabilities',
+        '@nolebase/ui',
+      ], 
+    },
+  },
 
   markdown: {
     math: true,
