@@ -16,6 +16,4 @@ include("drivers.jl")
 include("io.jl")
 include("utils.jl")
 
-export reproject, reproject!
-
 end  # module

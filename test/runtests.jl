@@ -8,6 +8,7 @@ import GeoFormatTypes as GFT
 import GeoInterface as GI
 import DataAPI
 import LibGEOS
+import GeometryOps as GO
 
 # Use ArchGDAL datasets to test with
 const testdatadir = joinpath(@__DIR__, "data")
@@ -203,7 +204,7 @@ unknown_crs = GFT.WellKnownText(
         )
 
         # Buffer to also write polygons
-        table.geometry = GDF.buffer(table.geometry, 10)
+        table.geometry = GO.buffer(table.geometry, 10)
         GDF.write(joinpath(testdatadir, "test_polygons.shp"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.gpkg"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.geojson"), table)
@@ -211,7 +212,7 @@ unknown_crs = GFT.WellKnownText(
 
     @testset "Reproject" begin
         table = DataFrame(; geometry = AG.createpoint.([[52, 4, 0]]), name = "test")
-        geoms = GDF.reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
+        geoms = GDF._reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
         ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992))
         @test GDF.GI.getcoord(geoms[1], 1) ≈ 59742.01980968987
         @test GDF.GI.getcoord(ntable.geometry[1], 1) ≈ 59742.01980968987
