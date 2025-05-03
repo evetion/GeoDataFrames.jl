@@ -142,18 +142,16 @@ function reproject!(df::DataFrame, from_crs, to_crs; always_xy = false)
     columns = Tables.columns(df)
     for gc in getgeometrycolumns(df)
         gc in Tables.columnnames(columns) || continue
-        reproject(df[!, gc], from_crs, to_crs; always_xy)
+        df[!, gc] = GeometryVector(reproject(df[!, gc], from_crs, to_crs; always_xy))
     end
     metadata!(df, "crs", to_crs; style = :note)
     metadata!(df, "GEOINTERFACE:crs", to_crs; style = :note)
 end
 
+function reproject(sv::GeometryVector, from_crs, to_crs; always_xy = false)
+    GO.reproject.(sv, Ref(from_crs), Ref(to_crs); always_xy)
+end
 function reproject(sv::AbstractVector{<:AG.IGeometry}, from_crs, to_crs; always_xy = false)
-    Base.depwarn(
-        "`reproject(sv::AbstractVector)` will be deprecated in a future release. " *
-        "Please use `reproject(df::DataFrame)` instead to make sure the dataframe crs metadata is updated.",
-        :reproject,
-    )
     AG.reproject.(sv, Ref(from_crs), Ref(to_crs); order = always_xy ? :trad : :compliant)
 end
 

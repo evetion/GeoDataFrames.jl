@@ -7,6 +7,7 @@ import ArchGDAL as AG
 import GeoFormatTypes as GFT
 import GeoInterface as GI
 import DataAPI
+import LibGEOS
 
 # Use ArchGDAL datasets to test with
 const testdatadir = joinpath(@__DIR__, "data")
@@ -212,12 +213,12 @@ unknown_crs = GFT.WellKnownText(
         table = DataFrame(; geometry = AG.createpoint.([[52, 4, 0]]), name = "test")
         geoms = GDF.reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
         ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992))
-        @test GDF.AG.getpoint(geoms[1], 0)[1] ≈ 59742.01980968987
-        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ 59742.01980968987
+        @test GDF.GI.getcoord(geoms[1], 1) ≈ 59742.01980968987
+        @test GDF.GI.getcoord(ntable.geometry[1], 1) ≈ 59742.01980968987
 
         table = DataFrame(; geometry = AG.createpoint.([[4, 52, 0]]), name = "test")
         ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992); always_xy = true)
-        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ 59742.01980968987
+        @test GDF.GI.getcoord(ntable.geometry[1], 1) ≈ 59742.01980968987
         GDF.write(
             joinpath(testdatadir, "test_reprojection.gpkg"),
             table;
@@ -227,11 +228,11 @@ unknown_crs = GFT.WellKnownText(
 
     @testset "Kwargs" begin
         table = DataFrame(; foo = AG.createpoint.([[0, 0, 0]]), name = "test")
-        GDF.write(joinpath(testdatadir, "test_options1.gpkg"), table; geom_column = :foo)
+        GDF.write(joinpath(testdatadir, "test_options1.gpkg"), table; geometrycolumn = :foo)
         GDF.write(
             joinpath(testdatadir, "test_options2.gpkg"),
             table;
-            geom_columns = Set((:foo,)),
+            geom_columns = (:foo,),
         )
 
         table = DataFrame(;
@@ -242,12 +243,12 @@ unknown_crs = GFT.WellKnownText(
         @test_throws Exception GDF.write(
             joinpath(testdatadir, "test_options3.gpkg"),
             table;
-            geom_column = :foo,
+            geometrycolumn = :foo,
         )  # wrong argument
         @test_throws AG.GDAL.GDALError GDF.write(
             joinpath(testdatadir, "test_options3.gpkg"),
             table;
-            geom_columns = Set((:foo, :bar)),
+            geom_columns = (:foo, :bar),
         )  # two geometry columns
 
         table = DataFrame(; foo = AG.createpoint.([[0, 0, 0]]), name = "test")
@@ -258,7 +259,7 @@ unknown_crs = GFT.WellKnownText(
                 "GEOMETRY_NAME" => "bar",
                 "DESCRIPTION" => "Written by GeoDataFrames.jl",
             ),
-            geom_column = :foo,
+            geometrycolumn = :foo,
         )
     end
 
@@ -294,7 +295,7 @@ unknown_crs = GFT.WellKnownText(
         table = DataFrame(; geom = AG.createpoint(1.0, 2.0), name = "test")
         gdbdir = joinpath(testdatadir, "test_options.gdb")
         isdir(gdbdir) && rm(gdbdir; recursive = true)
-        GDF.write(gdbdir, table; driver = "OpenFileGDB", geom_column = :geom)
+        GDF.write(gdbdir, table; driver = "OpenFileGDB", geometrycolumn = :geom)
         @test isdir(gdbdir)
         table = GDF.read(gdbdir)
         @test nrow(table) == 1
@@ -321,6 +322,11 @@ unknown_crs = GFT.WellKnownText(
         @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
+        ntable = GDF.reproject(df, GFT.EPSG(4326))
+        @test GDF.GI.x(ntable.geometry[1]) ≈ 41.927107
+
+        @test !isnothing(GI.crs(df))
+
         GDF.write("test_native.shp", df; force = true)
         GDF.write(GDF.ArchGDALDriver(), "test.shp", df; force = true)
     end
@@ -338,6 +344,9 @@ unknown_crs = GFT.WellKnownText(
                 GI.coordinates(df2.geometry[1])[1],
             ),
         )
+
+        @test !isnothing(GI.crs(df))
+
         GDF.write("test_native.geojson", df)
         GDF.write(GDF.ArchGDALDriver(), "test.geojson", df)
     end
@@ -351,6 +360,8 @@ unknown_crs = GFT.WellKnownText(
         # FlatGeobuf does not support GeoInterface yet
         @test_broken GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test_broken GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+
+        @test !isnothing(GI.crs(df))
 
         # GDF.write("test_native.fgb", df)  # Can't convert FlatGeobuf to ArchGDAL
         GDF.write("test_native.fgb", df2)
@@ -367,6 +378,8 @@ unknown_crs = GFT.WellKnownText(
         @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
+        @test !isnothing(GI.crs(df))
+
         GDF.write("test_native.parquet", df)
         GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
     end
@@ -380,6 +393,9 @@ unknown_crs = GFT.WellKnownText(
         @test nrow(df) == nrow(df2)
         @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+
+        # @test !isnothing(GI.crs(df))  # file has no crs
+        @test "GEOINTERFACE:geometrycolumns" in keys(GDF.metadata(df))
 
         GDF.write("test_native.arrow", df)
         GDF.write(GDF.ArchGDALDriver(), "test.arrow", df)

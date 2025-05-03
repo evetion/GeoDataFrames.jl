@@ -7,6 +7,8 @@ import GeoFormatTypes as GFT
 import GeoInterface as GI
 using DataAPI
 using Reexport
+import GeometryOps as GO
+import Proj  # For GO reproject
 
 include("vector.jl")
 include("exports.jl")

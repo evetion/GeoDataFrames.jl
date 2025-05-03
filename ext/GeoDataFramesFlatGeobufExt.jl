@@ -4,8 +4,16 @@ using FlatGeobuf
 using GeoDataFrames: FlatGeobufDriver, ArchGDALDriver, GeoDataFrames
 
 function GeoDataFrames.read(::FlatGeobufDriver, fname::AbstractString; kwargs...)
-    df = GeoDataFrames.DataFrame(FlatGeobuf.read_file(fname; kwargs...))
+    table = FlatGeobuf.read_file(fname; kwargs...)
+    df = GeoDataFrames.DataFrame(table; copycols = false)
     GeoDataFrames.rename!(df, :geom => :geometry)
+    GeoDataFrames.metadata!(
+        df,
+        "GEOINTERFACE:crs",
+        GeoDataFrames.GFT.EPSG(table.header.crs.code);
+        style = :note,
+    )
+    GeoDataFrames.metadata!(df, "GEOINTERFACE:geometrycolumns", (:geometry,); style = :note)
     return df
 end
 
