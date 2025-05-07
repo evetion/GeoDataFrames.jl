@@ -10,11 +10,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## v0.4.0
+
+## Added
 - Updated documentation, now using VitePress.
 - Add new driver framework to read files using native drivers.
 - Added native driver package extensions on GeoJSON, ShapeFile, GeoParquet, GeoArrow and FlatGeobuf.
 - Geometry columns are now wrapped in a GeometryVector, allowing for future improvements.
-- Now exports GeoInterface methods instead of ArchGDAL methods for geometry operation.
+
+### Changed
+- Now exports GeometryOps and GeoInterface methods instead of ArchGDAL methods for geometry operation.
+- The `geom_columns` keyword for `write` is now `geometrycolumn`, and also accepts a single Symbol.
+
+### Removed
+- Removed automatic broadcast implementations of operations like buffer.
+
+## v0.3.13
+- Support updating/appending to existing files, by specifying `update=true` in the `write` function.
+
+## v0.3.12
+- Add `always_xy` keyword to `reproject`.
 
 ## v0.3.11
 - Changed `reproject` to work on a DataFrame, correctly setting the (crs) metadata

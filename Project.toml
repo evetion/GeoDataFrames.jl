@@ -1,7 +1,7 @@
 name = "GeoDataFrames"
 uuid = "62cb38b5-d8d2-4862-a48e-6a340996859f"
 authors = ["Maarten Pronk <git@evetion.nl> and contributors"]
-version = "0.3.11"
+version = "0.4.0"
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
@@ -10,7 +10,9 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Extents = "411431e0-e8b7-467b-b5e0-f676ba4f2910"
 GeoFormatTypes = "68eda718-8dee-11e9-39e7-89f7f65f511f"
 GeoInterface = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
+GeometryOps = "3251bfac-6a57-4b6d-aa61-ac1fef2975ab"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Proj = "c94c279d-25a6-4763-9509-64d165bea63e"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
@@ -33,12 +35,14 @@ ArchGDAL = "0.10"
 DataAPI = "1.13"
 DataFrames = "1.4"
 Extents = "0.1"
-FlatGeobuf = "0.1.2"
+FlatGeobuf = "0.2"
 GeoArrow = "0.2"
 GeoFormatTypes = "0.3, 0.4"
 GeoInterface = "1.0.1"
 GeoJSON = "0.8.1"
 GeoParquet = "0.2.1"
+GeometryOps = "0.1.23"
+Proj = "1.8.1"
 Reexport = "1.2"
 Shapefile = "0.13.1"
 Tables = "1"
@@ -46,7 +50,8 @@ julia = "1.10"
 
 [extras]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+LibGEOS = "a90b1aa1-3769-5649-ba7e-abc5a9d163eb"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "Dates", "Shapefile", "GeoArrow", "GeoJSON", "GeoParquet", "FlatGeobuf"]
+test = ["Test", "Dates", "Shapefile", "GeoArrow", "GeoJSON", "GeoParquet", "FlatGeobuf", "LibGEOS"]

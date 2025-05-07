@@ -7,6 +7,8 @@ import ArchGDAL as AG
 import GeoFormatTypes as GFT
 import GeoInterface as GI
 import DataAPI
+import LibGEOS
+import GeometryOps as GO
 
 # Use ArchGDAL datasets to test with
 const testdatadir = joinpath(@__DIR__, "data")
@@ -15,43 +17,43 @@ REPO_URL = "https://github.com/yeesian/ArchGDALDatasets/blob/master/"
 
 remotefiles = [
     (
-        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.dbf?raw=true",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/sites.dbf",
         "7df95edea06c46418287ae3430887f44f9116b29715783f7d1a11b2b931d6e7d",
     ),
     (
-        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.prj?raw=true",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/sites.prj",
         "81fb1a246728609a446b25b0df9ede41c3e7b6a133ce78f10edbd2647fc38ce1",
     ),
     (
-        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.sbn?raw=true",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/sites.sbn",
         "198d9d695f3e7a0a0ac0ebfd6afbe044b78db3e685fffd241a32396e8b341ed3",
     ),
     (
-        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.sbx?raw=true",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/sites.sbx",
         "49bbe1942b899d52cf1d1b01ea10bd481ec40bdc4c94ff866aece5e81f2261f6",
     ),
     (
-        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.shp?raw=true",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/sites.shp",
         "69af5a6184053f0b71f266dc54c944f1ec02013fb66dbb33412d8b1976d5ea2b",
     ),
     (
-        "https://github.com/yeesian/ArchGDALDatasets/blob/master/ospy/data1/sites.shx?raw=true",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/sites.shx",
         "1f3da459ccb151958743171e41e6a01810b2a007305d55666e01d680da7bbf08",
     ),
     (
-        "https://github.com/opengeospatial/geoparquet/raw/v1.0.0/examples/example.parquet",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/example.parquet",
         "3dc1a3df76290cc62aa6d7aa6aa00d0988b3157ee77a042167b3f8302d05aa6c",
     ),
     (
-        "https://raw.githubusercontent.com/geoarrow/geoarrow-data/v0.1.0/example/example-multipolygon_z.arrow",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/example-multipolygon_z.arrow",
         "0cd4d7c5611581a5ae30fbbacc6f733a7da2ae78ac02ef8cffeb1e2d4f39b91c",
     ),
     (
-        "https://storage.googleapis.com/open-geodata/linz-examples/nz-buildings-outlines.parquet",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/nz-buildings-outlines.parquet",
         "b64389237b9879c275aec4e47f0e6be8fdd5d64437a05aef10839f574efc5dbc",
     ),
     (
-        "https://github.com/bjornharrtell/flatgeobuf/blob/master/test/data/countries.fgb?raw=true",
+        "https://github.com/evetion/GeoDataFrames.jl/releases/download/v0.1.0/countries.fgb",
         "d8dc3baf855320d10c6a662bf1171273849dd8a0935066b5b7b8dd83b3484cb3",
     ),
 ]
@@ -202,7 +204,7 @@ unknown_crs = GFT.WellKnownText(
         )
 
         # Buffer to also write polygons
-        table.geometry = GDF.buffer(table.geometry, 10)
+        table.geometry = GO.buffer(table.geometry, 10)
         GDF.write(joinpath(testdatadir, "test_polygons.shp"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.gpkg"), table)
         GDF.write(joinpath(testdatadir, "test_polygons.geojson"), table)
@@ -210,14 +212,14 @@ unknown_crs = GFT.WellKnownText(
 
     @testset "Reproject" begin
         table = DataFrame(; geometry = AG.createpoint.([[52, 4, 0]]), name = "test")
-        geoms = GDF.reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
+        geoms = GDF._reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
         ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992))
-        @test GDF.AG.getpoint(geoms[1], 0)[1] ≈ 59742.01980968987
-        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ 59742.01980968987
+        @test GDF.GI.getcoord(geoms[1], 1) ≈ 59742.01980968987
+        @test GDF.GI.getcoord(ntable.geometry[1], 1) ≈ 59742.01980968987
 
         table = DataFrame(; geometry = AG.createpoint.([[4, 52, 0]]), name = "test")
         ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992); always_xy = true)
-        @test GDF.AG.getpoint(ntable.geometry[1], 0)[1] ≈ 59742.01980968987
+        @test GDF.GI.getcoord(ntable.geometry[1], 1) ≈ 59742.01980968987
         GDF.write(
             joinpath(testdatadir, "test_reprojection.gpkg"),
             table;
@@ -227,11 +229,11 @@ unknown_crs = GFT.WellKnownText(
 
     @testset "Kwargs" begin
         table = DataFrame(; foo = AG.createpoint.([[0, 0, 0]]), name = "test")
-        GDF.write(joinpath(testdatadir, "test_options1.gpkg"), table; geom_column = :foo)
+        GDF.write(joinpath(testdatadir, "test_options1.gpkg"), table; geometrycolumn = :foo)
         GDF.write(
             joinpath(testdatadir, "test_options2.gpkg"),
             table;
-            geom_columns = Set((:foo,)),
+            geom_columns = (:foo,),
         )
 
         table = DataFrame(;
@@ -242,12 +244,12 @@ unknown_crs = GFT.WellKnownText(
         @test_throws Exception GDF.write(
             joinpath(testdatadir, "test_options3.gpkg"),
             table;
-            geom_column = :foo,
+            geometrycolumn = :foo,
         )  # wrong argument
         @test_throws AG.GDAL.GDALError GDF.write(
             joinpath(testdatadir, "test_options3.gpkg"),
             table;
-            geom_columns = Set((:foo, :bar)),
+            geom_columns = (:foo, :bar),
         )  # two geometry columns
 
         table = DataFrame(; foo = AG.createpoint.([[0, 0, 0]]), name = "test")
@@ -258,7 +260,7 @@ unknown_crs = GFT.WellKnownText(
                 "GEOMETRY_NAME" => "bar",
                 "DESCRIPTION" => "Written by GeoDataFrames.jl",
             ),
-            geom_column = :foo,
+            geometrycolumn = :foo,
         )
     end
 
@@ -294,7 +296,7 @@ unknown_crs = GFT.WellKnownText(
         table = DataFrame(; geom = AG.createpoint(1.0, 2.0), name = "test")
         gdbdir = joinpath(testdatadir, "test_options.gdb")
         isdir(gdbdir) && rm(gdbdir; recursive = true)
-        GDF.write(gdbdir, table; driver = "OpenFileGDB", geom_column = :geom)
+        GDF.write(gdbdir, table; driver = "OpenFileGDB", geometrycolumn = :geom)
         @test isdir(gdbdir)
         table = GDF.read(gdbdir)
         @test nrow(table) == 1
@@ -321,6 +323,11 @@ unknown_crs = GFT.WellKnownText(
         @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
+        ntable = GDF.reproject(df, GFT.EPSG(4326))
+        @test GDF.GI.x(ntable.geometry[1]) ≈ 41.927107
+
+        @test !isnothing(GI.crs(df))
+
         GDF.write("test_native.shp", df; force = true)
         GDF.write(GDF.ArchGDALDriver(), "test.shp", df; force = true)
     end
@@ -338,6 +345,9 @@ unknown_crs = GFT.WellKnownText(
                 GI.coordinates(df2.geometry[1])[1],
             ),
         )
+
+        @test !isnothing(GI.crs(df))
+
         GDF.write("test_native.geojson", df)
         GDF.write(GDF.ArchGDALDriver(), "test.geojson", df)
     end
@@ -348,9 +358,12 @@ unknown_crs = GFT.WellKnownText(
         df2 = GDF.read(GDF.ArchGDALDriver(), fn)
         @test sort(names(df)) == sort(names(df2))
         @test nrow(df) == nrow(df2)
-        # FlatGeobuf does not support GeoInterface yet
-        @test_broken GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-        @test_broken GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        for i in eachindex(df.geometry)
+            GI.coordinates(df.geometry[i]) == GI.coordinates(df2.geometry[i])
+        end
+
+        @test !isnothing(GI.crs(df))
 
         # GDF.write("test_native.fgb", df)  # Can't convert FlatGeobuf to ArchGDAL
         GDF.write("test_native.fgb", df2)
@@ -367,6 +380,8 @@ unknown_crs = GFT.WellKnownText(
         @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
+        @test !isnothing(GI.crs(df))
+
         GDF.write("test_native.parquet", df)
         GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
     end
@@ -381,9 +396,30 @@ unknown_crs = GFT.WellKnownText(
         @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
+        # @test !isnothing(GI.crs(df))  # file has no crs
+        @test "GEOINTERFACE:geometrycolumns" in keys(GDF.metadata(df))
+
         GDF.write("test_native.arrow", df)
         GDF.write(GDF.ArchGDALDriver(), "test.arrow", df)
     end
+
+    @testset "Combination of drivers" begin
+        drivers = [
+            (GDF.ArchGDALDriver(), "test.gpkg", true, (;))
+            (GDF.GeoJSONDriver(), "test.geojson", true, (;))
+            (GDF.ShapefileDriver(), "test.shp", false, (; force = true))
+            (GDF.FlatGeobufDriver(), "test.fgb", false, (;))  # No write support yet
+            (GDF.GeoParquetDriver(), "test_native.parquet", true, (;))
+        ]
+        for ((driver, fn, can_write), (driver_b, fn_b, can_write_b, kwargs)) in
+            Iterators.product(drivers, drivers)
+            can_write_b || continue
+            @debug "Testing $driver with $driver_b"
+            df = GDF.read(driver, fn)
+            GDF.write(driver_b, "temp" * fn_b, df; kwargs...)
+        end
+    end
+
     @testset "Writing crs of geometry" begin
         geom = GI.Wrappers.Point(0, 0; crs = GFT.EPSG(4326))
         df = DataFrame(; geometry = [geom])

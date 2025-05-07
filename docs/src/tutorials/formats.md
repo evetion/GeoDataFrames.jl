@@ -23,12 +23,12 @@ GeoDataFrames.write("test.foo", df)
 ERROR: ArgumentError: There are no GDAL drivers for the .foo extension
 ```
 
-You can specifiy the driver using a keyword as follows:
+You can specifiy the GDAL driver using a keyword as follows:
 ```julia
 GeoDataFrames.write("test.foo", df; driver="GeoJSON")
 ```
 
-The complete list of driver codes are listed in the [GDAL documentation](https://gdal.org/drivers/vector/index.html).
+The complete list of GDAL driver codes are listed in the [GDAL documentation](https://gdal.org/drivers/vector/index.html).
 
 
 ## Package extensions
@@ -59,7 +59,7 @@ Pkg.add("Shapefile")
 
 ```julia [ FlatGeobuf ]
 using Pkg
-Pkg.add("FlatGeobuf")
+Pkg.add("FlatGeobuf")  # no write support yet
 ```
 
 :::
@@ -68,12 +68,16 @@ and as an example, to use the GeoArrow backend and download files, you will need
 
 ```julia
 using GeoDataFrames, GeoArrow  
-# now .arrow and .feather files will be loaded using GeoArrow
-read("file.arrow")
+# now .arrow and .feather files will be read/written using GeoArrow
+GeoDataFrames.read("file.arrow")
+GeoDataFrames.write("file.arrow", df)
 ```
 
 to override this behaviour and use the default GDAL driver, you can pass the driver option as first argument:
 
 ```julia
-read(ArchGDALDriver(), "file.arrow")
+GeoDataFrames.read(GeoDataFrames.ArchGDALDriver(), "file.arrow")
+GeoDataFrames.write(GeoDataFrames.ArchGDALDriver(), "file.arrow", df)
 ```
+
+Any keywords arguments to the `read` and `write` are passed on to the underlying package.

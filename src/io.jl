@@ -156,7 +156,8 @@ function write(
     crs::Union{GFT.GeoFormat, Nothing} = getcrs(table),
     driver::Union{Nothing, AbstractString} = nothing,
     options::Dict{String, String} = Dict{String, String}(),
-    geom_columns = getgeometrycolumns(table),
+    geom_columns = nothing,
+    geometrycolumn = getgeometrycolumns(table),
     chunksize = 20_000,
     update = false,
     kwargs...,
@@ -165,15 +166,28 @@ function write(
     sch = Tables.schema(rows)
 
     # Determine geometry columns
-    isnothing(geom_columns) && error(
-        "Please set `geom_columns` kw or define `GI.geometrycolumns` for $(typeof(table))",
+    if !isnothing(geom_columns)  # backwards compatible
+        geometrycolumn = geom_columns
+    end
+    isnothing(geometrycolumn) && error(
+        "Please set the `geometrycolumn` kwarg or define `GI.geometrycolumns` for $(typeof(table))",
     )
-    if :geom_column in keys(kwargs)  # backwards compatible
-        geom_columns = (kwargs[:geom_column],)
+
+    # Accept both Symbol and Tuple{Symbol}
+    geometry_columns = if geometrycolumn isa NTuple{N, <:Symbol} where {N}
+        geometrycolumn
+    elseif geometrycolumn isa Symbol
+        (geometrycolumn,)
+    else
+        throw(
+            ArgumentError(
+                "geometrycolumn must be a Symbol or a Tuple of Symbols, got a $(typeof(geometrycolumn))",
+            ),
+        )
     end
 
     geom_types = []
-    for geom_column in geom_columns
+    for geom_column in geometry_columns
         geometry = getproperty(first(rows), geom_column)
         trait = GI.geomtrait(geometry)
         ndim = GI.ncoord(geometry)
@@ -188,7 +202,7 @@ function write(
 
     # Set geometry name in options
     if !("geometry_name" in keys(options))
-        options["geometry_name"] = String(first(geom_columns))
+        options["geometry_name"] = String(first(geometry_columns))
     end
 
     # Find driver
@@ -201,9 +215,9 @@ function write(
     # Figure out attributes
     fields = Vector{Tuple{Symbol, DataType}}()
     for (name, type) in zip(sch.names, sch.types)
-        if !(name in geom_columns)
+        if !(name in geometry_columns)
             GI.isgeometry(type) &&
-                @warn "Writing $name as a non-spatial column, use the `geom_columns` argument to write as a geometry."
+                @warn "Writing $name as a non-spatial column, use the `geometrycolumn` argument to write as a geometry."
             nmtype = nonmissingtype(type)
             if !hasmethod(convert, (Type{AG.OGRFieldType}, Type{nmtype}))
                 error("Can't convert $type to an OGRFieldType. Please report an issue.")
@@ -241,7 +255,7 @@ function write(
                 options = stringlist(options),
             ) do layer
                 for (i, (geom_column, geom_type)) in
-                    enumerate(zip(geom_columns, geom_types))
+                    enumerate(zip(geometry_columns, geom_types))
                     if i > 1
                         AG.writegeomdefn!(layer, string(geom_column), geom_type)
                     end
@@ -261,7 +275,7 @@ function write(
 
                     for row in chunk
                         AG.addfeature(layer) do feature
-                            for (i, (geom_column)) in enumerate(geom_columns)
+                            for (i, (geom_column)) in enumerate(geometry_columns)
                                 AG.GDAL.ogr_f_setgeomfielddirectly(
                                     feature.ptr,
                                     i - 1,
