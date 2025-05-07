@@ -71,7 +71,9 @@ Plotting will work out of the box with Plots and Makie.
 ```@setup plots
 using GeoDataFrames
 using Plots
-df = GeoDataFrames.read("../../../test/data/test_points.shp")
+table = DataFrame(; geometry = GeoInterface.Point.(rand(10), rand(10)), name = "test")
+GeoDataFrames.write("test_points.shp", table)
+df = GeoDataFrames.read("test_points.shp")
 ```
 
 ```@example plots
@@ -83,7 +85,7 @@ plot(df.geometry)
 ```@setup plots2
 using GeoDataFrames
 using CairoMakie
-df = GeoDataFrames.read("../../../test/data/test_points.shp")
+df = GeoDataFrames.read("test_points.shp")
 ```
 
 ```@example plots2
