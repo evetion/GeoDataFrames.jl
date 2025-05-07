@@ -27,7 +27,7 @@ features:
     link: /tutorials/usage
   - title: 🗂️🌐 Data Formats
     details: Works out of the box with Shapefiles, GeoPackages, GeoJSON, and more recent formats as GeoParquet and GeoArrow. It uses native Julia drivers where possible.
-    link: /background/formats
+    link: /tutorials/formats
   - title: 🧩⚡ Seamless integration
     details: GeoDataFrames.jl is fully compatible with the Tables.jl and GeoInterface.jl ecosystems. This enables plotting, operations and analysis using the full power of the Julia ecosystem.
 

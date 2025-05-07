@@ -358,9 +358,10 @@ unknown_crs = GFT.WellKnownText(
         df2 = GDF.read(GDF.ArchGDALDriver(), fn)
         @test sort(names(df)) == sort(names(df2))
         @test nrow(df) == nrow(df2)
-        # FlatGeobuf does not support GeoInterface yet
-        @test_broken GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-        @test_broken GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        for i in eachindex(df.geometry)
+            GI.coordinates(df.geometry[i]) == GI.coordinates(df2.geometry[i])
+        end
 
         @test !isnothing(GI.crs(df))
 
@@ -401,6 +402,24 @@ unknown_crs = GFT.WellKnownText(
         GDF.write("test_native.arrow", df)
         GDF.write(GDF.ArchGDALDriver(), "test.arrow", df)
     end
+
+    @testset "Combination of drivers" begin
+        drivers = [
+            (GDF.ArchGDALDriver(), "test.gpkg", true, (;))
+            (GDF.GeoJSONDriver(), "test.geojson", true, (;))
+            (GDF.ShapefileDriver(), "test.shp", false, (; force = true))
+            (GDF.FlatGeobufDriver(), "test.fgb", false, (;))  # No write support yet
+            (GDF.GeoParquetDriver(), "test_native.parquet", true, (;))
+        ]
+        for ((driver, fn, can_write), (driver_b, fn_b, can_write_b, kwargs)) in
+            Iterators.product(drivers, drivers)
+            can_write_b || continue
+            @debug "Testing $driver with $driver_b"
+            df = GDF.read(driver, fn)
+            GDF.write(driver_b, "temp" * fn_b, df; kwargs...)
+        end
+    end
+
     @testset "Writing crs of geometry" begin
         geom = GI.Wrappers.Point(0, 0; crs = GFT.EPSG(4326))
         df = DataFrame(; geometry = [geom])

@@ -1,6 +1,8 @@
 using GeoDataFrames
 using Documenter
 using DocumenterVitepress
+using CairoMakie
+CairoMakie.activate!(; type = "png")
 
 DocMeta.setdocmeta!(GeoDataFrames, :DocTestSetup, :(using GeoDataFrames); recursive = true)
 
@@ -19,11 +21,11 @@ makedocs(;
             "Installation" => "tutorials/installation.md",
             "Usage" => "tutorials/usage.md",
             "Operations" => "tutorials/ops.md",
+            "File formats" => "tutorials/formats.md",
         ],
         "Background" => Any[
             "Motivation" => "background/geopandas.md",
             "Future plans" => "background/todo.md",
-            "File formats" => "background/formats.md",
         ],
         "Reference" => Any[
             "API" => "reference/api.md"

@@ -72,7 +72,7 @@ end
 
 # We don't define DataFrames as feature collections explicitly, since
 # that would complicate handling.  But, we can still implement the 
-# feature interface, for use in generic code.  And dispatch can always
+# feature interface, for use in generic code. And dispatch can always
 # handle a DataFrame by fixing the trait in a specialized method.
 
 # GI.isfeaturecollection(::Type{<:DataFrame}) = true
@@ -160,7 +160,7 @@ function reproject!(df::DataFrame, source_crs, target_crs; always_xy = false, kw
 end
 
 function _reproject(
-    sv::GeometryVector,
+    sv::AbstractVector,
     source_crs,
     target_crs;
     always_xy = false,

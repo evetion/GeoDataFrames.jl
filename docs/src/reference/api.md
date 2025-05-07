@@ -7,8 +7,6 @@ CurrentModule = GeoDataFrames
 ```@docs
 read
 write
-reproject
-reproject!
 ```
 
 ## Drivers
