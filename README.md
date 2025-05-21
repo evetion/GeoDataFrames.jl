@@ -49,12 +49,12 @@ GDF.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM
 ```
 
 ## Writing
-
+Here we create a vector of points (i.e. tuples of x,y coordinates), place them into a DataFrame, and write to a shapefile
 ```julia
 using DataFrames
 
-coords = zip(rand(10), rand(10))
-df = DataFrame(geometry=createpoint.(coords), name="test");
+coords = [(x,y) for (x,y) in zip(rand(10), rand(10))]
+df = DataFrame(geometry=coords, name="test");
 GDF.write("test_points.shp", df)
 ```
 
@@ -67,6 +67,6 @@ Note that any Tables.jl compatible table with GeoInterface.jl compatible geometr
 to pass which column(s) contain geometries, or by defining `GeoInterface.geometrycolumns` on your table. Multiple geometry columns,
 when enabled by the driver, can be provided in this way.
 ```julia
-table = [(; geom=AG.createpoint(1.0, 2.0), name="test")]
-GDF.write(tfn, table; geom_columns=(:geometry,),)
+table = [(; geometry=(118.17, 34.20), name="test")]
+GDF.write("test_points.shp", table)
 ```
