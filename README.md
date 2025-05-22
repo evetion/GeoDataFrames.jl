@@ -53,7 +53,7 @@ Here we create a vector of points (i.e. tuples of x,y coordinates), place them i
 ```julia
 using DataFrames
 
-coords = [(x,y) for (x,y) in zip(rand(10), rand(10))]
+coords = tuple.(rand(10), rand(10))  
 df = DataFrame(geometry=coords, name="test");
 GDF.write("test_points.shp", df)
 ```
