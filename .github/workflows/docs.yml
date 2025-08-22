@@ -38,8 +38,6 @@ jobs:
         uses: julia-actions/setup-julia@v2
       - name: Pull Julia cache
         uses: julia-actions/cache@v2
-      - name: Install documentation dependencies
-        run: julia --project=docs -e 'using Pkg; pkg"dev ."; Pkg.instantiate(); Pkg.precompile(); Pkg.status()'
       #- name: Creating new mds from src
       - name: Build and deploy docs
         uses: julia-actions/julia-docdeploy@v1

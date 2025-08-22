@@ -334,7 +334,7 @@ const lookup_method = Dict{DataType, Function}(
 function _convert(::Type{T}, geom) where {T <: AG.Geometry}
     f = get(lookup_method, typeof(GI.geomtrait(geom)), nothing)
     isnothing(f) && error(
-        "Cannot convert an object of $(typeof(geom)) with the $(typeof(type)) trait (yet). Please report an issue.",
+        "Cannot convert an object of $(typeof(geom)) with the $T trait (yet). Please report an issue.",
     )
     return f(GI.coordinates(geom))
 end
