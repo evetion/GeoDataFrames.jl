@@ -35,7 +35,7 @@ makedocs(;
     warnonly = [:missing_docs, :cross_references],
 )
 
-deploydocs(;
+DocumenterVitepress.deploydocs(;
     repo = "github.com/evetion/GeoDataFrames.jl",
     target = "build",
     devbranch = "master",
