@@ -7,4 +7,4 @@ LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [sources]
-DocumenterVitepress = {url = "https://github.com/evetion/DocumenterVitepress.jl", rev = "master"}
+DocumenterVitepress = {rev = "37425b00330856bdb557f012e09ab837f52d8f41", url = "https://github.com/evetion/DocumenterVitepress.jl.git"}
