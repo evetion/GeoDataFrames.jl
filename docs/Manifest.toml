@@ -367,7 +367,7 @@ version = "1.14.1"
 deps = ["ANSIColoredPrinters", "Base64", "DocInventories", "DocStringExtensions", "Documenter", "IOCapture", "Markdown", "NodeJS_20_jll", "REPL", "TOML"]
 git-tree-sha1 = "d9f317b1ff81ed1ae03896ff47947868c7219449"
 repo-rev = "master"
-repo-url = "https://github.com/evetion/DocumenterVitepress.jl.git"
+repo-url = "https://github.com/evetion/DocumenterVitepress.jl"
 uuid = "4710194d-e776-4893-9690-8d956a29c365"
 version = "0.2.6"
 
