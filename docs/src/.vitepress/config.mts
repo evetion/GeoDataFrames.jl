@@ -2,6 +2,7 @@ import { defineConfig } from 'vitepress'
 import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
 import mathjax3 from "markdown-it-mathjax3";
 import footnote from "markdown-it-footnote";
+import path from 'path'
 
 function getBaseRepository(base: string): string {
   if (!base || base === '/') return '/';
@@ -33,28 +34,50 @@ export default defineConfig({
   cleanUrls: true,
   outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
   head: [
-    ['link', { rel: 'icon', href: 'favicon.ico' }],
-    ['script', { src: `${getBaseRepository(baseTemp.base)}versions.js` }],
-    // ['script', { src: '/GeoDataFrames.jl/versions.js' }], // for custom domains, I guess if deploy_url is available.
-    ['script', { src: `${baseTemp.base}siteinfo.js` }]
+    ['link', { rel: 'icon', href: 'REPLACE_ME_DOCUMENTER_VITEPRESS_FAVICON' }],
+    ['script', {src: `${getBaseRepository(baseTemp.base)}versions.js`}],
+    // ['script', {src: '/versions.js'], for custom domains, I guess if deploy_url is available.
+    ['script', {src: `${baseTemp.base}siteinfo.js`}]
   ],
-  ignoreDeadLinks: true,
-
+  
+  vite: {
+    define: {
+      __DEPLOY_ABSPATH__: JSON.stringify('REPLACE_ME_DOCUMENTER_VITEPRESS_DEPLOY_ABSPATH'),
+    },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '../components')
+      }
+    },
+    optimizeDeps: {
+      exclude: [ 
+        '@nolebase/vitepress-plugin-enhanced-readabilities/client',
+        'vitepress',
+        '@nolebase/ui',
+      ], 
+    }, 
+    ssr: { 
+      noExternal: [ 
+        // If there are other packages that need to be processed by Vite, you can add them here.
+        '@nolebase/vitepress-plugin-enhanced-readabilities',
+        '@nolebase/ui',
+      ], 
+    },
+  },
   markdown: {
     math: true,
     config(md) {
       md.use(tabsMarkdownPlugin),
-        md.use(mathjax3),
-        md.use(footnote)
+      md.use(mathjax3),
+      md.use(footnote)
     },
     theme: {
       light: "github-light",
-      dark: "github-dark"
-    }
+      dark: "github-dark"}
   },
   themeConfig: {
     outline: 'deep',
-    logo: '/logo.svg',
+    logo: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     search: {
       provider: 'local',
       options: {
