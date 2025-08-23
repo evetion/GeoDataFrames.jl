@@ -41,4 +41,5 @@ DocumenterVitepress.deploydocs(;
     devbranch = "master",
     branch = "gh-pages",
     push_preview = true,
+    deploy_url = "www.evetion.nl/GeoDataFrames.jl",
 )
