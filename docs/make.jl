@@ -14,7 +14,12 @@ makedocs(;
     authors = "Maarten Pronk <git@evetion.nl> and contributors",
     repo = Remotes.GitHub("evetion", "GeoDataFrames.jl"),
     sitename = "GeoDataFrames.jl",
-    format = MarkdownVitepress(; repo = "https://github.com/evetion/GeoDataFrames.jl"),
+    format = MarkdownVitepress(;
+        repo = "https://github.com/evetion/GeoDataFrames.jl",
+        devbranch = "master",
+        devurl = "dev",
+        deploy_url = "www.evetion.nl/GeoDataFrames.jl",
+    ),
     pages = [
         "Home" => "index.md",
         "Tutorials" => Any[
@@ -33,7 +38,6 @@ makedocs(;
         ],
     ],
     warnonly = [:missing_docs, :cross_references],
-    deploy_url = "www.evetion.nl/GeoDataFrames.jl",
 )
 
 DocumenterVitepress.deploydocs(;
