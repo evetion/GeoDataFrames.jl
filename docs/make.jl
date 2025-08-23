@@ -33,13 +33,13 @@ makedocs(;
         ],
     ],
     warnonly = [:missing_docs, :cross_references],
+    deploy_url = "www.evetion.nl/GeoDataFrames.jl",
 )
 
 DocumenterVitepress.deploydocs(;
     repo = "github.com/evetion/GeoDataFrames.jl",
-    target = "build",
+    target = joinpath(@__DIR__, "build"),
     devbranch = "master",
     branch = "gh-pages",
     push_preview = true,
-    deploy_url = "www.evetion.nl/GeoDataFrames.jl",
 )
