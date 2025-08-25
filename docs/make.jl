@@ -18,7 +18,7 @@ makedocs(;
         repo = "https://github.com/evetion/GeoDataFrames.jl",
         devbranch = "master",
         devurl = "dev",
-        deploy_url = "https://www.evetion.nl/GeoDataFrames.jl",
+        # deploy_url = "https://www.evetion.nl/GeoDataFrames.jl",
     ),
     pages = [
         "Home" => "index.md",
