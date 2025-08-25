@@ -42,7 +42,7 @@ export default defineConfig({
   
   vite: {
     define: {
-      __DEPLOY_ABSPATH__: JSON.stringify('REPLACE_ME_DOCUMENTER_VITEPRESS_DEPLOY_ABSPATH'),
+      __DEPLOY_ABSPATH__: JSON.stringify('https://www.evetion.nl/GeoDataFrames.jl/'),
     },
     resolve: {
       alias: {
