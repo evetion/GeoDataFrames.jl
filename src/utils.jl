@@ -102,24 +102,24 @@ GI.geometrycolumns(row::DataFrameRow) = GI.geometrycolumns(getfield(row, :df)) #
 GI.crs(row::DataFrameRow) = GI.crs(getfield(row, :df)) # get the parent of the row view
 
 """
-    reproject(df::DataFrame, target_crs; [always_xy=false,])
+    reproject(df::DataFrame, target_crs; [always_xy=true,])
 
 Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `target_crs`, from the current CRS.
 See also [`reproject(df, source_crs, target_crs)`](@ref) and the in place version [`reproject!(df, target_crs)`](@ref).
-`always_xy` (`false` by default) can override the default axis mapping strategy of the CRS. If true, input is 
+`always_xy` (`true` by default) can override the default axis mapping strategy of the CRS. If true, input is 
 assumed to be in the traditional GIS order (longitude, latitude).
 """
 function GO.reproject(
     df::DataFrame,
     target_crs::CRSType;
-    always_xy = false,
+    always_xy = true,
     kwargs...,
 ) where {CRSType <: Union{GFT.GeoFormat, Proj.CRS, String}}
     reproject!(copy(df), target_crs; always_xy, kwargs...)
 end
 
 """
-    reproject(df::DataFrame, source_crs, target_crs; [always_xy=false])
+    reproject(df::DataFrame, source_crs, target_crs; [always_xy=true])
 
 Reproject the geometries in a DataFrame `df` from the crs `source_crs` to a new crs `target_crs`.
 This overrides any current CRS of the Dataframe.
@@ -128,28 +128,35 @@ function GO.reproject(
     df::DataFrame,
     source_crs::CRSType,
     target_crs::CRSType;
-    always_xy = false,
+    always_xy = true,
     kwargs...,
 ) where {CRSType <: Union{GFT.GeoFormat, Proj.CRS, String}}
-    reproject!(copy(df), source_crs, target_crs; always_xy, kwargs...)
+    rdf = copy(df)
+    columns = Tables.columns(rdf)
+    for gc in getgeometrycolumns(rdf)
+        gc in Tables.columnnames(columns) || continue
+        rdf[!, gc] isa AbstractVector{<:AG.IGeometry} || continue
+        rdf[!, gc] = AG.clone.(rdf[!, gc])
+    end
+    reproject!(rdf, source_crs, target_crs; always_xy, kwargs...)
 end
 
 """
-    reproject!(df::DataFrame, target_crs; [always_xy=false])
+    reproject!(df::DataFrame, target_crs; [always_xy=true])
 
 Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `target_crs`, from the current CRS, in place.
 """
-function reproject!(df::DataFrame, target_crs; always_xy = false, kwargs...)
+function reproject!(df::DataFrame, target_crs; always_xy = true, kwargs...)
     reproject!(df, getcrs(df), target_crs; always_xy, kwargs...)
 end
 
 """
-    reproject!(df::DataFrame, source_crs, target_crs; [always_xy=false])
+    reproject!(df::DataFrame, source_crs, target_crs; [always_xy=true])
 
 Reproject the geometries in a DataFrame `df` from the crs `source_crs` to a new crs `target_crs` in place.
 This overrides any current CRS of the Dataframe.
 """
-function reproject!(df::DataFrame, source_crs, target_crs; always_xy = false, kwargs...)
+function reproject!(df::DataFrame, source_crs, target_crs; always_xy = true, kwargs...)
     columns = Tables.columns(df)
     for gc in getgeometrycolumns(df)
         gc in Tables.columnnames(columns) || continue
@@ -159,22 +166,17 @@ function reproject!(df::DataFrame, source_crs, target_crs; always_xy = false, kw
     metadata!(df, "GEOINTERFACE:crs", target_crs; style = :note)
 end
 
-function _reproject(
-    sv::AbstractVector,
-    source_crs,
-    target_crs;
-    always_xy = false,
-    kwargs...,
-)
+function _reproject(sv::AbstractVector, source_crs, target_crs; always_xy = true, kwargs...)
     GO.reproject(sv, source_crs, target_crs; always_xy, kwargs...)
 end
 function _reproject(
     sv::AbstractVector{<:AG.IGeometry},
     source_crs,
     target_crs;
-    always_xy = false,
+    always_xy = true,
     kwargs...,
 )
+    # Note this happens in place
     sv .=
         AG.reproject.(
             sv,
