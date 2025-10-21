@@ -42,6 +42,29 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
     (GI.MultiPolygonTrait, 4) => AG.wkbMultiPolygonZM,
 )
 
+
+"""
+    GeoDataFrame(fn; kwargs...)
+
+Read a file into a DataFrame as a GeoDataFrame, optionally passing keyword arguments
+passed to the driver, by default set to [`ArchGDALDriver`](@ref)
+
+# Arguments
+- `fn::AbstractString`: The file name or path to read.
+- `kwargs...`: Additional keyword arguments to pass to `read`.
+
+# Returns
+- `DataFrame`: A DataFrame object with geometry columns.
+
+# Example
+```julia
+df = GeoDataFrame("mydata.shp")
+```
+"""
+function GeoDataFrame(fn; kwargs...)
+    df = read(fn; kwargs...)
+end
+
 """
     read(fn::AbstractString; layer::Union{Integer,AbstractString}, kwargs...)
 
