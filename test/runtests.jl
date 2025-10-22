@@ -212,13 +212,20 @@ unknown_crs = GFT.WellKnownText(
 
     @testset "Reproject" begin
         table = DataFrame(; geometry = AG.createpoint.([[52, 4, 0]]), name = "test")
-        geoms = GDF._reproject(AG.clone.(table.geometry), GFT.EPSG(4326), GFT.EPSG(28992))
-        ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992))
+        geoms = GDF._reproject(
+            AG.clone.(table.geometry),
+            GFT.EPSG(4326),
+            GFT.EPSG(28992);
+            always_xy = false,
+        )
+        ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992); always_xy = false)
+        @test GDF.GI.getcoord(table.geometry[1], 1) == 52
         @test GDF.GI.getcoord(geoms[1], 1) ≈ 59742.01980968987
         @test GDF.GI.getcoord(ntable.geometry[1], 1) ≈ 59742.01980968987
 
         table = DataFrame(; geometry = AG.createpoint.([[4, 52, 0]]), name = "test")
         ntable = GDF.reproject(table, GFT.EPSG(4326), GFT.EPSG(28992); always_xy = true)
+        @test GDF.GI.getcoord(table.geometry[1], 1) == 4
         @test GDF.GI.getcoord(ntable.geometry[1], 1) ≈ 59742.01980968987
         GDF.write(
             joinpath(testdatadir, "test_reprojection.gpkg"),
@@ -323,7 +330,7 @@ unknown_crs = GFT.WellKnownText(
         @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
         @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
-        ntable = GDF.reproject(df, GFT.EPSG(4326))
+        ntable = GDF.reproject(df, GFT.EPSG(4326); always_xy = false)
         @test GDF.GI.x(ntable.geometry[1]) ≈ 41.927107
 
         @test !isnothing(GI.crs(df))
