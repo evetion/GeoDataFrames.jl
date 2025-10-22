@@ -72,6 +72,12 @@ unknown_crs = GFT.WellKnownText(
     coords = zip(rand(10), rand(10))
     coords3 = zip(rand(10), rand(10), rand(10))
 
+    @testset "Read shapefile using GeoDataFrame" begin
+        t = GDF.GeoDataFrame(fn)
+        @test nrow(t) == 42
+        @test "ID" in names(t)
+    end
+
     @testset "Read shapefile" begin
         t = GDF.read(fn)
         @test nrow(t) == 42

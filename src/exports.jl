@@ -36,3 +36,5 @@ export AbstractWellKnownText,
     WellKnownBinary,
     WellKnownText,
     WellKnownText2 #=GeoJSON,=#
+
+export GeoDataFrame
