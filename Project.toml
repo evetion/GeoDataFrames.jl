@@ -1,7 +1,7 @@
 name = "GeoDataFrames"
 uuid = "62cb38b5-d8d2-4862-a48e-6a340996859f"
-authors = ["Maarten Pronk <git@evetion.nl> and contributors"]
 version = "0.4.0"
+authors = ["Maarten Pronk <git@evetion.nl> and contributors"]
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
@@ -46,12 +46,14 @@ Proj = "1.8.1"
 Reexport = "1.2"
 Shapefile = "0.13.1"
 Tables = "1"
+TestItemRunner = "1.1.0"
 julia = "1.10"
 
 [extras]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 LibGEOS = "a90b1aa1-3769-5649-ba7e-abc5a9d163eb"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 
 [targets]
-test = ["Test", "Dates", "Shapefile", "GeoArrow", "GeoJSON", "GeoParquet", "FlatGeobuf", "LibGEOS"]
+test = ["Test", "Dates", "Shapefile", "GeoArrow", "GeoJSON", "GeoParquet", "FlatGeobuf", "LibGEOS", "TestItemRunner"]
