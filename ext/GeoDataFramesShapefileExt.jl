@@ -8,7 +8,8 @@ function GeoDataFrames.read(
     fname::AbstractString;
     kwargs...,
 )
-    table = Shapefile.Table(fname; kwargs...)
+    isempty(kwargs) || @error "Shapefile backend does not support keyword arguments."
+    table = Shapefile.Table(fname)
     df = GeoDataFrames.DataFrame(table; copycols = false)
     ncrs = GeoDataFrames.GI.crs(table)
     GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", ncrs; style = :note)
@@ -16,13 +17,19 @@ function GeoDataFrames.read(
     return df
 end
 
+writekwargs = (:force,)
+
 function GeoDataFrames.write(
     ::GeoDataFrames.ShapefileDriver,
     fname::AbstractString,
     data;
     kwargs...,
 )
+    kwargnames = keys(kwargs)
+    kwargnames ⊆ writekwargs ||
+        @error "Shapefile backend does not support $(setdiff(kwargnames, writekwargs)) as keyword arguments."
     Shapefile.write(fname, data; kwargs...)
+    fname
 end
 
 end

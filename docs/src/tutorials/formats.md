@@ -33,7 +33,7 @@ The complete list of GDAL driver codes are listed in the [GDAL documentation](ht
 
 ## Package extensions
 
-For several file formats, there now exist native Julia packages that can be used as backends. Before using such a specific file format, you must install and load its corresponding package.
+For several file formats, there now exist native Julia packages that can be used as backends. Before using a backend, you must install and load its corresponding package.
 
 ::: code-group
 

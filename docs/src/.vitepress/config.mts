@@ -39,7 +39,8 @@ export default defineConfig({
     // ['script', {src: '/versions.js'], for custom domains, I guess if deploy_url is available.
     ['script', {src: `${baseTemp.base}siteinfo.js`}]
   ],
-  
+  ignoreDeadLinks: true,
+
   vite: {
     define: {
       __DEPLOY_ABSPATH__: JSON.stringify('/GeoDataFrames.jl/'),

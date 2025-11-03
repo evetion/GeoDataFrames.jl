@@ -102,6 +102,29 @@ GI.geometrycolumns(row::DataFrameRow) = GI.geometrycolumns(getfield(row, :df)) #
 GI.crs(row::DataFrameRow) = GI.crs(getfield(row, :df)) # get the parent of the row view
 
 """
+    setgeometrycolumn!(df::DataFrame, column::Symbol)
+    setgeometrycolumn!(df::DataFrame, columns::Tuple{Vararg{Symbol}})
+
+Set the geometry column(s) of a GeoDataFrame `df`. Retrieve them with [`GeoInterface.geometrycolumns(df)`](@ref).
+"""
+setgeometrycolumn!(df::DataFrame, column::Symbol) =
+    metadata!(df, "GEOINTERFACE:geometrycolumns", (column,); style = :note)
+setgeometrycolumn!(df::DataFrame, columns::Tuple{Vararg{Symbol}}) =
+    metadata!(df, "GEOINTERFACE:geometrycolumns", columns; style = :note)
+
+"""
+    setcrs!(df::DataFrame, crs)
+
+Set the coordinate reference system of the geometry column(s) of a GeoDataFrame `df`.
+Note that this overrides any existing CRS without transforming the geometries.
+For transforming geometries, use [`reproject!(df, target_crs)`](@ref) instead.
+
+`crs` should be one of GeoFormatTypes wrappers, such as `EPSG(code)`.
+Retrieve it with [`GeoInterface.crs(df)`](@ref).
+"""
+setcrs!(df::DataFrame, crs) = metadata!(df, "GEOINTERFACE:crs", crs; style = :note)
+
+"""
     reproject(df::DataFrame, target_crs; [always_xy=true,])
 
 Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `target_crs`, from the current CRS.
