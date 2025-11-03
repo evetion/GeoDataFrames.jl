@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Keyword argument checking for all driver extensions.
-- Added `setrs!` and `setgeometrycolumn!` utility functions to set the corresponding metadata on a GeoDataFrame.
+- Added `setcrs!` and `setgeometrycolumn!` utility functions to set the corresponding metadata on a GeoDataFrame.
 - Added a [Migration Guide](@ref) to the documentation.
 
 ### Fixed

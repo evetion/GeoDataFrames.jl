@@ -37,7 +37,7 @@ function GeoDataFrames.write(::GeoJSONDriver, fname::AbstractString, data; kwarg
     kwargnames = keys(kwargs)
     kwargnames ⊆ writekwargs ||
         @error "GeoJSON backend does not support $(setdiff(kwargnames, writekwargs)) as keyword arguments."
-    GeoJSON.write(fname, data)
+    GeoJSON.write(fname, data; kwargs...)
 end
 
 end
