@@ -1,5 +1,9 @@
 # Examples
 
+```@meta
+CurrentModule = GeoDataFrames
+```
+
 ## Reading a CSV
 Some data is distributed as CSV files with WKT geometries in a custom column such as `wkt`. Something like
 ```csv

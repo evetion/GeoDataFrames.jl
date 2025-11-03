@@ -1,5 +1,9 @@
 # Installation
 
+```@meta
+CurrentModule = GeoDataFrames
+```
+
 Since `GeoDataFrames.jl` is registered in the Julia General registry, you can simply run the following
 command in the Julia REPL:
 
@@ -18,7 +22,7 @@ pkg> add GeoDataFrames#main
 ```
 
 
-## Package extensions
+## Extensions
 
 GeoDataFrames depends on (Arch)GDAL to load and save data by default. However, for several file formats, there now exist native Julia packages that can be used as backends. Before using the native backend for specific file format, you must install and load its corresponding package.
 

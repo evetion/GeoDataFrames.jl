@@ -1,8 +1,12 @@
 # Operations
 
+```@meta
+CurrentModule = GeoDataFrames
+```
+
 ## Spatial operations
 For spatial operations we use the native Julia package [GeometryOps.jl](https://juliageo.org/GeometryOps.jl/stable/), which is imported automatically.
-It has operations such as `intersects`, `contains`, `within`, `buffer`, `convexhull`, `union`, `intersection`, and other tools such as `simplify` and `reproject`. One can apply these operations directly on the geometry column of a GeoDataFrame.
+It has operations such as [`GeometryOps.intersects`](@extref), [`GeometryOps.contains`](@extref), [`GeometryOps.within`](@extref), [`GeometryOps.union`](@extref), [`GeometryOps.intersection`](@extref), and other tools such as [`GeometryOps.simplify`](@extref) and [`GeometryOps.reproject`](@extref). One can apply these operations directly on the geometry column of a GeoDataFrame.
 
 ```julia
 GeometryOps.intersects.(df.geometry, df.geometry[1]);
@@ -41,7 +45,7 @@ df.geometry = GeoInterface.buffer.(df.geometry, 10)  # points turn into polygons
 
 ## Metadata
 
-You can get and set the coordinate reference system (CRS) and geometry column of a GeoDataFrame using the utility functions [`crs`](@ref), [`setcrs!`](@ref), [`geometrycolumn`](@ref), and [`geometrycolumn!`](@ref).
+You can get and set the coordinate reference system (CRS) and geometry column of a GeoDataFrame using the utility functions [`GeoInterface.crs`](@ref), [`setcrs!`](@ref), [`GeoInterface.geometrycolumns`](@ref), and [`setgeometrycolumn!`](@ref).
 
 ```julia
 table = DataFrame(geom=GeoInterface.Point(4, 52), name="home")
@@ -64,7 +68,7 @@ table.geometry = GeoInterface.convert.(Ref(ArchGDAL), table.geometry)
 
 ## Reprojection
 
-Reproject uses GeometryOps, except for ArchGDAL geometries, to reproject geometries. We use [GeoFormatTypes.jl](https://juliageo.org/GeoFormatTypes.jl/stable/) to specify the coordinate reference system (CRS) of the geometries. The CRS can be specified in several ways, including EPSG codes, PROJ strings, and WKT strings. Note that we always assume coordinates to be in (x,y) order, so (longitude,latitude) for geographic CRS. You can override this by setting `always_xy=false` in [`reproject`](@ref).
+Reproject uses GeometryOps, except for ArchGDAL geometries, to reproject geometries. We use [GeoFormatTypes.jl](https://juliageo.org/GeoFormatTypes.jl/stable/) to specify the coordinate reference system (CRS) of the geometries. The CRS can be specified in several ways, including EPSG codes ([`GeoFormatTypes.EPSG`](@extref)), PROJ strings ([`GeoFormatTypes.ProjString`](@extref)), and WKT strings ([`GeoFormatTypes.WellKnownText`](@extref)). Note that we always assume coordinates to be in (x,y) order, so (longitude,latitude) for geographic CRS. You can override this by setting `always_xy=false` in [`reproject`](@ref).
 
 ```julia
 dfr = GeometryOps.reproject(df, EPSG(4326), EPSG(28992))

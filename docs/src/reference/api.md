@@ -33,3 +33,9 @@ setcrs!
 reproject
 reproject!
 ```
+
+## GeometryVector
+
+```@docs
+GeometryVector
+```

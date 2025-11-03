@@ -44,7 +44,7 @@ Simple geographical vector interaction built on top of [ArchGDAL](https://github
 
 ## How to Install GeoDataFrames.jl?
 
-Since `GeoDataFrames.jl` is registered in the Julia General registry, you can simply run the following
+As `GeoDataFrames.jl` is registered in the Julia General registry, you can simply run the following
 command in the Julia REPL:
 
 ```julia
@@ -62,7 +62,7 @@ pkg> add GeoDataFrames#main
 ```
 
 
-## Package extensions
+## Enabling package extensions
 
 GeoDataFrames depends on GDAL to load and save data by default. However, for several file formats, there now exist native Julia packages that can be used as backends. Before using such a specific file format, you must install and load its corresponding package.
 

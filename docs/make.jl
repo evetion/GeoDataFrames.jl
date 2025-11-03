@@ -7,10 +7,30 @@ using GeoArrow
 
 using Documenter
 using DocumenterVitepress
+using DocumenterInterLinks
+
 using CairoMakie
 CairoMakie.activate!(; type = "png")
 
-DocMeta.setdocmeta!(GeoDataFrames, :DocTestSetup, :(using GeoDataFrames); recursive = true)
+DocMeta.setdocmeta!(
+    GeoDataFrames,
+    :DocTestSetup,
+    :(using GeoDataFrames, GeoInterface);
+    recursive = true,
+)
+
+links = InterLinks(
+    # "GeoInterface" => ("https://juliageo.org/GeoInterface.jl/stable/",),
+    "GeometryOps" => (
+        "https://juliageo.org/GeometryOps.jl/stable/",
+        "https://juliageo.org/GeometryOps.jl/stable/objects.inv",
+    ),
+    # "ArchGDAL" => ("https://yeesian.com/ArchGDAL.jl/stable/",),
+    "GeoFormatTypes" => (
+        "https://juliageo.org/GeoFormatTypes.jl/stable/",
+        "https://juliageo.org/GeoFormatTypes.jl/stable/objects.inv",
+    ),
+);
 
 img = joinpath(@__DIR__, "src/plot_points.png")
 isfile(img) || cp(joinpath(@__DIR__, "../img/plot_points.png"), img)
@@ -53,6 +73,7 @@ makedocs(;
         ],
     ],
     warnonly = [:missing_docs, :cross_references],
+    plugins = [links],
 )
 
 DocumenterVitepress.deploydocs(;
