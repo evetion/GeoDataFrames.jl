@@ -236,7 +236,7 @@ require(['jquery'], function ($) {
       var existing_versions = version_selector_select.children("option");
       var existing_versions_texts = existing_versions.map(function (i, x) { return x.text });
       DOC_VERSIONS.forEach(function (each) {
-        var version_url = documenterBaseURL + "/GeoDataFrames.jl/../" + each;
+        var version_url = documenterBaseURL + "/GeoDataFrames.jl/../../" + each;
         var existing_id = $.inArray(each, existing_versions_texts);
         // if not already in the version selector, add it as a new option,
         // otherwise update the old option with the URL and enable it
