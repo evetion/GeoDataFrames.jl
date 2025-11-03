@@ -25,7 +25,7 @@ end
 Write the provided `table` to `fn` using the GeoParquetDriver driver. Any additional keyword arguments are passed to `Parquet2.write`.
 """
 function GeoDataFrames.write(::GeoParquetDriver, fname::AbstractString, data; kwargs...)
-    GeoParquet.write(fname, data, GI.geometrycolumns(data), GI.crs(data); kwargs...)
+    GeoParquet.write(fname, data, GI.geometrycolumns(data); kwargs...)
 end
 
 end
