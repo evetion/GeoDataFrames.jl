@@ -16,7 +16,14 @@ img = joinpath(@__DIR__, "src/plot_points.png")
 isfile(img) || cp(joinpath(@__DIR__, "../img/plot_points.png"), img)
 
 makedocs(;
-    modules = [GeoDataFrames],
+    modules = [
+        GeoDataFrames,
+        Base.get_extension(GeoDataFrames, :GeoDataFramesFlatGeobufExt),
+        Base.get_extension(GeoDataFrames, :GeoDataFramesGeoArrowExt),
+        Base.get_extension(GeoDataFrames, :GeoDataFramesGeoJSONExt),
+        Base.get_extension(GeoDataFrames, :GeoDataFramesGeoParquetExt),
+        Base.get_extension(GeoDataFrames, :GeoDataFramesShapefileExt),
+    ],
     authors = "Maarten Pronk <git@evetion.nl> and contributors",
     repo = Remotes.GitHub("evetion", "GeoDataFrames.jl"),
     sitename = "GeoDataFrames.jl",
