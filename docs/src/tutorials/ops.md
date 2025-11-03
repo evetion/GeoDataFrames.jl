@@ -1,13 +1,13 @@
 # Operations
 
+## Spatial operations
 For spatial operations we use the native Julia package [GeometryOps.jl](https://juliageo.org/GeometryOps.jl/stable/), which is imported automatically.
-
-## Geometric operations
+It has operations such as `intersects`, `contains`, `within`, `buffer`, `convexhull`, `union`, `intersection`, and other tools such as `simplify` and `reproject`. One can apply these operations directly on the geometry column of a GeoDataFrame.
 
 ```julia
 GeometryOps.intersects.(df.geometry, df.geometry[1]);
 10-element BitVector:
- 1
+ 1  # self-intersection
  0
  0
  0
@@ -19,7 +19,7 @@ GeometryOps.intersects.(df.geometry, df.geometry[1]);
  0
 ```
 
-To get the previous behaviour for ArchGDAL geometries and operations, you can use the GeoInterface operation (also imported automatically), which uses the (Arch)GDAL operations under the hood. Note that this will not work for files loaded from GeoJSON, GeoParquet, or FlatGeobuf, as they are not supported by ArchGDAL.
+To get the pre v0.4 behaviour for ArchGDAL geometries and operations, you can use the GeoInterface operation (also imported automatically), which uses the (Arch)GDAL operations under the hood. You need to read the file with `read(GeoDataFrames.ArchGDALDriver(), fn; kwargs)`, or convert the geometry as described below in [Conversion](@ref). Note that this will not work for files loaded from GeoJSON, GeoParquet, or FlatGeobuf, as they are not supported by ArchGDAL.
 
 ```julia
 df.geometry = GeoInterface.buffer.(df.geometry, 10)  # points turn into polygons
@@ -39,9 +39,32 @@ df.geometry = GeoInterface.buffer.(df.geometry, 10)  # points turn into polygons
   10 │ Geometry: wkbPolygon  test
 ```
 
+## Metadata
+
+You can get and set the coordinate reference system (CRS) and geometry column of a GeoDataFrame using the utility functions [`crs`](@ref), [`setcrs!`](@ref), [`geometrycolumn`](@ref), and [`geometrycolumn!`](@ref).
+
+```julia
+table = DataFrame(geom=GeoInterface.Point(4, 52), name="home")
+GeoDataFrames.setgeometrycolumn!(table, :geom)  # set geometry column
+GeoDataFrames.setcrs!(table, EPSG(4326))  # set coordinate reference system
+GeoDataFrames.write("home.gpkg", table)
+```
+
+If your table doesn't include metadata, or you want to override it, most drivers accept the `crs` and `geometrycolumn` keyword arguments in the [`write`](@ref) function.
+
+## Conversion
+You can convert between GeoInterface and ArchGDAL geometries using `GeoInterface.convert`:
+
+```julia
+table = DataFrame(; geometry = GeoInterface.Point.(rand(10), rand(10)), name = "test")
+
+using ArchGDAL
+table.geometry = GeoInterface.convert.(Ref(ArchGDAL), table.geometry)
+```
+
 ## Reprojection
 
-Reproject uses GeometryOps, except for ArchGDAL geometries, to reproject geometries. We use [GeoFormatTypes.jl](https://juliageo.org/GeoFormatTypes.jl/stable/) to specify the coordinate reference system (CRS) of the geometries. The CRS can be specified in several ways, including EPSG codes, PROJ strings, and WKT strings.
+Reproject uses GeometryOps, except for ArchGDAL geometries, to reproject geometries. We use [GeoFormatTypes.jl](https://juliageo.org/GeoFormatTypes.jl/stable/) to specify the coordinate reference system (CRS) of the geometries. The CRS can be specified in several ways, including EPSG codes, PROJ strings, and WKT strings. Note that we always assume coordinates to be in (x,y) order, so (longitude,latitude) for geographic CRS. You can override this by setting `always_xy=false` in [`reproject`](@ref).
 
 ```julia
 dfr = GeometryOps.reproject(df, EPSG(4326), EPSG(28992))
@@ -61,7 +84,7 @@ dfr = GeometryOps.reproject(df, EPSG(4326), EPSG(28992))
   10 │ (-458280.0, -5.72039e6)   test
 ```
 
-Note that by using GeometryOps, point geometries are reproject to a tuple of coordinates, which is treated as a valid Point geometry as well.
+Note that by using GeometryOps, point geometries are reproject to a tuple of coordinates, which is treated as a valid Point geometry.
 
 ## Plotting
 
@@ -72,7 +95,7 @@ Plotting will work out of the box with Plots and Makie.
 using GeoDataFrames
 using Plots
 table = DataFrame(; geometry = GeoInterface.Point.(rand(10), rand(10)), name = "test")
-GeoDataFrames.write("test_points.shp", table)
+GeoDataFrames.write("test_points.shp", table; force=true)
 df = GeoDataFrames.read("test_points.shp")
 ```
 

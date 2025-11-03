@@ -271,6 +271,7 @@ end
     GDF.write("test_native.shp", df; force = true)
     GDF.write(GDF.ArchGDALDriver(), "test.shp", df; force = true)
 end
+
 @testitem "GeoJSON" setup = [Setup] begin
     using GeoJSON
     fn = joinpath(testdatadir, "test_polygons.geojson")
@@ -291,6 +292,7 @@ end
     GDF.write("test_native.geojson", df)
     GDF.write(GDF.ArchGDALDriver(), "test.geojson", df)
 end
+
 @testitem "FlatGeobuf" setup = [Setup] begin
     using FlatGeobuf
     fn = joinpath(testdatadir, "countries.fgb")
@@ -309,6 +311,7 @@ end
     GDF.write("test_native.fgb", df2)
     GDF.write(GDF.ArchGDALDriver(), "test.fgb", df2)
 end
+
 @testitem "GeoParquet" setup = [Setup] begin
     Sys.iswindows() && return  # Skip on Windows. See GDAL.jl#146
     using GeoParquet
@@ -325,6 +328,7 @@ end
     GDF.write("test_native.parquet", df)
     GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
 end
+
 @testitem "GeoArrow" setup = [Setup] begin
     using GeoArrow
     fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
@@ -371,6 +375,7 @@ end
         "GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563,AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AXIS[\"Latitude\",NORTH],AXIS[\"Longitude\",EAST],AUTHORITY[\"EPSG\",\"4326\"]]",
     )
 end
+
 @testitem "Update geopackage" setup = [Setup] begin
     coords = collect(zip(rand(Float32, 2), rand(Float32, 2)))
     t = DataFrame(; geometry = AG.createpoint.(coords), name = ["test", "test2"])
@@ -394,6 +399,23 @@ end
         t;
         update = true,
     )
+end
+
+@testitem "setcrs!" setup = [Setup] begin
+    fn = joinpath(testdatadir, "sites.shp")
+    t = GDF.read(fn)
+    @test GI.crs(t) != GFT.EPSG(4326)
+    GDF.setcrs!(t, GFT.EPSG(4326))
+    @test GI.crs(t) == GFT.EPSG(4326)
+end
+
+@testitem "setgeometrycolumn" setup = [Setup] begin
+    fn = joinpath(testdatadir, "sites.shp")
+    t = GDF.read(fn)
+    @test GI.geometrycolumns(t) == (:geometry,)
+    rename!(t, :geometry => :geom)
+    GDF.setgeometrycolumn!(t, :geom)
+    @test GI.geometrycolumns(t) == (:geom,)
 end
 
 @run_package_tests

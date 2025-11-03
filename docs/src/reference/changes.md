@@ -9,6 +9,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+- Automatic creation of a spatial index on reading.
+- Extent metadata support.
+- Improved show methods for GeoDataFrames and GeometryVectors.
+
+## v0.4.1
+
+### Added
+- Keyword argument checking for all driver extensions.
+- Added `setrs!` and `setgeometrycolumn!` utility functions to set the corresponding metadata on a GeoDataFrame.
+- Added a [Migration Guide](@ref) to the documentation.
+
+### Fixed
+- Set `always_xy=true` in `reproject` to align with GeometryOps.jl and the wider ecosystem.
+- `reproject` now no longer mutates ArchGDAL geometries in-place, preventing unexpected side-effects.
+
 ## v0.4.0
 
 ## Added
@@ -18,7 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Geometry columns are now wrapped in a GeometryVector, allowing for future improvements.
 
 ### Changed
-- Now exports GeometryOps and GeoInterface methods instead of ArchGDAL methods for geometry operation.
+- 💥 BREAKING: Native driver package extensions will be used instead of ArchGDAL when imported (Shapefile, GeoJSON, GeoArrow, GeoParquet, FlatGeobuf) for reading/writing files of the corresponding format.
+    You can get the old behaviour back by explicitly using the ArchGDALDriver when reading/writing files. `read(GeoDataFrames.ArchGDALDriver(), fn; kwargs)` and `write(GeoDataFrames.ArchGDALDriver(), fn, df; kwargs)`. See the [Migration Guide](@ref) for more details.
+- 💥 BREAKING: Now exports GeometryOps and GeoInterface methods instead of ArchGDAL methods for geometry operations. Not all combinations between GeometryOps and native driver geometries may work (e.g. you need to import `LibGEOS` for `buffer`), please file an issue if you encounter such a case. You can still use ArchGDAL directly (imported as `GeoDataFrames.AG`) together with the `read/write(ArchGDALDriver(),...)` discussed above.
+    See the [Migration Guide](@ref) for more details.
 - The `geom_columns` keyword for `write` is now `geometrycolumn`, and also accepts a single Symbol.
 
 ### Removed

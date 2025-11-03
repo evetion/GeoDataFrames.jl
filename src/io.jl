@@ -43,7 +43,7 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
 )
 
 """
-    read(fn::AbstractString; layer::Union{Integer,AbstractString}, kwargs...)
+    read(fn::AbstractString; kwargs...)
 
 Read a file into a DataFrame. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
 """
@@ -66,7 +66,7 @@ end
 """
     read(driver::AbstractDriver, fn::AbstractString; kwargs...)
 
-Read a file into a DataFrame using the specified driver. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+Read a file into a DataFrame using the specified `driver`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
 """
 function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
     @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
@@ -79,6 +79,7 @@ end
 Read a file into a DataFrame using the ArchGDAL driver.
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
+The `options` keyword argument can be used to pass GDAL open options.
 """
 function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwargs...)
     _isvalidlocal(fn) || error("File not found.")

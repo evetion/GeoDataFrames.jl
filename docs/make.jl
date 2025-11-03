@@ -1,4 +1,10 @@
 using GeoDataFrames
+using Shapefile
+using GeoJSON
+using FlatGeobuf
+using GeoParquet
+using GeoArrow
+
 using Documenter
 using DocumenterVitepress
 using CairoMakie
@@ -27,6 +33,7 @@ makedocs(;
             "Usage" => "tutorials/usage.md",
             "Operations" => "tutorials/ops.md",
             "File formats" => "tutorials/formats.md",
+            "Examples" => "tutorials/examples.md",
         ],
         "Background" => Any[
             "Motivation" => "background/geopandas.md",
@@ -35,6 +42,7 @@ makedocs(;
         "Reference" => Any[
             "API" => "reference/api.md"
             "Changelog" => "reference/changes.md"
+            "Migration Guide" => "reference/migration.md"
         ],
     ],
     warnonly = [:missing_docs, :cross_references],
