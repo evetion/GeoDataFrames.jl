@@ -211,7 +211,6 @@ end
     GI.isfeaturecollection(::Vector{<:NamedTuple}) = true
     GI.geomtrait(::Vector{<:NamedTuple}) = GI.FeatureCollectionTrait()  # TODO Make issue GeoInterface.jl
     GI.crs(::GI.FeatureCollectionTrait, ::Vector{<:NamedTuple}) = nothing
-    GI.isfeaturecollection(::Vector{<:NamedTuple}) = true
     GI.geometrycolumns(::Vector{<:NamedTuple}) = (:foo,)
     @test isfile(GDF.write(tfn, table))
 end
@@ -312,28 +311,30 @@ end
     GDF.write(GDF.ArchGDALDriver(), "test.fgb", df2)
 end
 
-@testitem "GeoParquet" setup = [Setup] begin
-    Sys.iswindows() && return  # Skip on Windows. See GDAL.jl#146
-    using GeoParquet
-    fn = joinpath(testdatadir, "example.parquet")
-    df = GDF.read(fn)
-    df2 = GDF.read(GDF.ArchGDALDriver(), fn)
-    @test sort(names(df)) == sort(names(df2))
-    @test nrow(df) == nrow(df2)
-    @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-    @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+# Skip on Windows. See GDAL.jl#146
+@static if Sys.iswindows()
+    @testitem "GeoParquet" setup = [Setup] begin
+        using GeoParquet
+        fn = joinpath(testdatadir, "example.parquet")
+        df = GDF.read(fn)
+        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+        @test sort(names(df)) == sort(names(df2))
+        @test nrow(df) == nrow(df2)
+        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
-    @test !isnothing(GI.crs(df))
+        @test !isnothing(GI.crs(df))
 
-    GDF.write("test_native.parquet", df)
-    GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
+        GDF.write("test_native.parquet", df)
+        GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
+    end
 end
 
 @testitem "GeoArrow" setup = [Setup] begin
     using GeoArrow
     fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
     df = GDF.read(fn)
-    ENV["OGR_ARROW_ALLOW_ALL_DIMS"] = "YES"
+    AG.setconfigoption("OGR_ARROW_ALLOW_ALL_DIMS", "YES")
     df2 = GDF.read(GDF.ArchGDALDriver(), fn)
     @test sort(names(df)) == sort(names(df2))
     @test nrow(df) == nrow(df2)
