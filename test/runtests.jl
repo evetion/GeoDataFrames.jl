@@ -29,7 +29,7 @@ end
 
 @testitem "Read non-existent shapefile" setup = [Setup] begin
     fne = "/bla.shp"
-    @test_throws ErrorException("File not found.") GDF.read(fne)
+    @test_throws ErrorException("Can't find local file /bla.shp.") GDF.read(fne)
 end
 
 @testitem "Read shapefile with layer id" setup = [Setup] begin
@@ -350,16 +350,32 @@ end
     drivers = [
         (GDF.ArchGDALDriver(), "test.gpkg", true, (;))
         (GDF.GeoJSONDriver(), "test.geojson", true, (;))
-        (GDF.ShapefileDriver(), "test.shp", false, (; force = true))
-        (GDF.FlatGeobufDriver(), "test.fgb", false, (;))  # No write support yet
-        (GDF.GeoParquetDriver(), "test_native.parquet", !Sys.iswindows(), (;))
+        (
+            GDF.ShapefileDriver(),
+            joinpath(testdatadir, "sites.shp"),
+            false,
+            (; force = true),
+        )
+        (GDF.FlatGeobufDriver(), joinpath(testdatadir, "countries.fgb"), false, (;))  # No write support yet
+        (
+            GDF.GeoParquetDriver(),
+            joinpath(testdatadir, "example.parquet"),
+            !Sys.iswindows(),
+            (;),
+        )
+        # (
+        #     GDF.GeoArrowDriver(),
+        #     joinpath(testdatadir, "example-multipolygon_z.arrow"),
+        #     true,
+        #     (;),
+        # )  # Broken
     ]
     for ((driver, fn, can_write), (driver_b, fn_b, can_write_b, kwargs)) in
         Iterators.product(drivers, drivers)
         can_write_b || continue
-        @info "Testing $driver with $driver_b"
+        @info "Testing reading with $driver and writing with $driver_b."
         df = GDF.read(driver, fn)
-        GDF.write(driver_b, "temp" * fn_b, df; kwargs...)
+        GDF.write(driver_b, "temp" * basename(fn_b), df; kwargs...)
     end
 end
 
