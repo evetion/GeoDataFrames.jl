@@ -354,12 +354,12 @@ end
         (GDF.GeoJSONDriver(), "test.geojson", true, (;))
         (GDF.ShapefileDriver(), "test.shp", false, (; force = true))
         (GDF.FlatGeobufDriver(), "test.fgb", false, (;))  # No write support yet
-        (GDF.GeoParquetDriver(), "test_native.parquet", true, (;))
+        (GDF.GeoParquetDriver(), "test_native.parquet", !Sys.iswindows(), (;))
     ]
     for ((driver, fn, can_write), (driver_b, fn_b, can_write_b, kwargs)) in
         Iterators.product(drivers, drivers)
         can_write_b || continue
-        @debug "Testing $driver with $driver_b"
+        @info "Testing $driver with $driver_b"
         df = GDF.read(driver, fn)
         GDF.write(driver_b, "temp" * fn_b, df; kwargs...)
     end
