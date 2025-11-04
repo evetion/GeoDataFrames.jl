@@ -312,7 +312,7 @@ end
 end
 
 # Skip on Windows. See GDAL.jl#146
-@testitem "GeoParquet" setup = [Setup] tags=[:nowindows] begin
+@testitem "GeoParquet" setup = [Setup] tags = [:nowindows] begin
     using GeoParquet
     fn = joinpath(testdatadir, "example.parquet")
     df = GDF.read(fn)
@@ -347,35 +347,39 @@ end
 end
 
 @testitem "Combination of drivers" setup = [Setup] begin
-    drivers = [
-        (GDF.ArchGDALDriver(), "test.gpkg", true, (;))
-        (GDF.GeoJSONDriver(), "test.geojson", true, (;))
-        (
-            GDF.ShapefileDriver(),
-            joinpath(testdatadir, "sites.shp"),
-            false,
-            (; force = true),
-        )
-        (GDF.FlatGeobufDriver(), joinpath(testdatadir, "countries.fgb"), false, (;))  # No write support yet
-        (
-            GDF.GeoParquetDriver(),
-            joinpath(testdatadir, "example.parquet"),
-            !Sys.iswindows(),
-            (;),
-        )
-        # (
-        #     GDF.GeoArrowDriver(),
-        #     joinpath(testdatadir, "example-multipolygon_z.arrow"),
-        #     true,
-        #     (;),
-        # )  # Broken
+    broken_combos = [
+        (GDF.GeoParquetDriver(), GDF.ShapefileDriver()),  # ArgumentError: Shapefiles can only contain geometries of the same type
+        (GDF.GeoParquetDriver(), GDF.FlatGeobufDriver()),  # ICreateFeature: Mismatched geometry type. Feature geometry type is Polygon, expected layer geometry type is Multi Polygon
+        (GDF.GeoArrowDriver(), GDF.ArchGDALDriver()),  # BoundsError: attempt to access @NamedTuple{x::Union{Missing, Float64}, y::Union{Missing, Float64}, z::Union{Missing, Float64}} at index [4]
+        (GDF.GeoArrowDriver(), GDF.GeoJSONDriver()),  # ArgumentError: reducing over an empty collection is not allowed; consider supplying `init` to the reducer
+        (GDF.GeoArrowDriver(), GDF.ShapefileDriver()),  # BoundsError: attempt to access @NamedTuple{x::Union{Missing, Float64}, y::Union{Missing, Float64}, z::Union{Missing, Float64}} at index [4]
+        (GDF.GeoArrowDriver(), GDF.FlatGeobufDriver()),  # BoundsError: attempt to access @NamedTuple{x::Union{Missing, Float64}, y::Union{Missing, Float64}, z::Union{Missing, Float64}} at index [4]
+        (GDF.GeoArrowDriver(), GDF.GeoArrowDriver()),  # BoundsError: attempt to access @NamedTuple{x::Union{Missing, Float64}, y::Union{Missing, Float64}, z::Union{Missing, Float64}} at index [4]
+        (GDF.GeoArrowDriver(), GDF.GeoParquetDriver()),  # UndefVarError: `wkbZM` not defined in `WellKnownGeometry`
+        (GDF.ArchGDALDriver(), GDF.GeoArrowDriver()),  # exception = TypeError: in Vararg, in count, expected Int64, got a value of type Int32
     ]
-    for ((driver, fn, can_write), (driver_b, fn_b, can_write_b, kwargs)) in
+    # GDAL.jl#146
+    if Sys.iswindows()
+        push!(broken_combos, (GDF.ArchGDALDriver(), GDF.GeoParquetDriver()))
+        push!(broken_combos, (GDF.ShapefileDriver(), GDF.GeoParquetDriver()))
+        push!(broken_combos, (GDF.GeoJSONDriver(), GDF.GeoParquetDriver()))
+        push!(broken_combos, (GDF.FlatGeobufDriver(), GDF.GeoParquetDriver()))
+    end
+
+    drivers = [
+        (GDF.ArchGDALDriver(), "test.gpkg", (;))
+        (GDF.GeoJSONDriver(), "test.geojson", (;))
+        (GDF.ShapefileDriver(), joinpath(testdatadir, "sites.shp"), (; force = true))
+        (GDF.FlatGeobufDriver(), joinpath(testdatadir, "countries.fgb"), (;))  # No write support yet
+        (GDF.GeoParquetDriver(), joinpath(testdatadir, "example.parquet"), (;))
+        (GDF.GeoArrowDriver(), joinpath(testdatadir, "example-multipolygon_z.arrow"), (;))  # Broken
+    ]
+    for ((driver_in, fn_in), (driver_out, fn_out, kwargs)) in
         Iterators.product(drivers, drivers)
-        can_write_b || continue
-        @info "Testing reading with $driver and writing with $driver_b."
-        df = GDF.read(driver, fn)
-        GDF.write(driver_b, "temp" * basename(fn_b), df; kwargs...)
+        (driver_in, driver_out) in broken_combos && continue
+        @info "Testing reading with $driver_in and writing with $driver_out."
+        df = GDF.read(driver_in, fn_in)
+        GDF.write(driver_out, "temp" * basename(fn_out), df; kwargs...)
     end
 end
 
@@ -435,4 +439,4 @@ end
 
 filter(ti) = !(:nowindows in ti.tags && Sys.iswindows())
 
-@run_package_tests filter=filter
+@run_package_tests filter = filter
