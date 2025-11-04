@@ -312,22 +312,20 @@ end
 end
 
 # Skip on Windows. See GDAL.jl#146
-@static if Sys.iswindows()
-    @testitem "GeoParquet" setup = [Setup] begin
-        using GeoParquet
-        fn = joinpath(testdatadir, "example.parquet")
-        df = GDF.read(fn)
-        df2 = GDF.read(GDF.ArchGDALDriver(), fn)
-        @test sort(names(df)) == sort(names(df2))
-        @test nrow(df) == nrow(df2)
-        @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
-        @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
+@testitem "GeoParquet" setup = [Setup] tags=[:nowindows] begin
+    using GeoParquet
+    fn = joinpath(testdatadir, "example.parquet")
+    df = GDF.read(fn)
+    df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+    @test sort(names(df)) == sort(names(df2))
+    @test nrow(df) == nrow(df2)
+    @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+    @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
-        @test !isnothing(GI.crs(df))
+    @test !isnothing(GI.crs(df))
 
-        GDF.write("test_native.parquet", df)
-        GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
-    end
+    GDF.write("test_native.parquet", df)
+    GDF.write(GDF.ArchGDALDriver(), "test.parquet", df)
 end
 
 @testitem "GeoArrow" setup = [Setup] begin
@@ -419,4 +417,6 @@ end
     @test GI.geometrycolumns(t) == (:geom,)
 end
 
-@run_package_tests
+filter(ti) = !(:nowindows in ti.tags && Sys.iswindows())
+
+@run_package_tests filter=filter
