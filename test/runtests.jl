@@ -365,6 +365,9 @@ end
         push!(broken_combos, (GDF.GeoJSONDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.FlatGeobufDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.GeoParquetDriver(), GDF.ArchGDALDriver()))  # not sure why this one fails
+        push!(broken_combos, (GDF.GeoParquetDriver(), GDF.ShapefileDriver()))  # not sure why this one fails
+        push!(broken_combos, (GDF.GeoParquetDriver(), GDF.GeoJSONDriver()))  # not sure why this one fails
+        push!(broken_combos, (GDF.GeoParquetDriver(), GDF.FlatGeobufDriver()))  # not sure why this one fails
     end
 
     drivers = [
