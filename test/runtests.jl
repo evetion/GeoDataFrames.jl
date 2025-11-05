@@ -249,7 +249,7 @@ end
 
 @testitem "Non existing Windows path #78" setup = [Setup] begin
     wfn = "C:\\non_existing_folder\\non_existing_file.shp"
-    @test_throws ErrorException("Unable to open $wfn.") GDF.read(wfn)
+    @test_throws ErrorException("Can't find local file $wfn.") GDF.read(wfn)
 end
 
 @testitem "Shapefile" setup = [Setup] begin
