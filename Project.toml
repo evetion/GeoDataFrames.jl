@@ -1,6 +1,6 @@
 name = "GeoDataFrames"
 uuid = "62cb38b5-d8d2-4862-a48e-6a340996859f"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Maarten Pronk <git@evetion.nl> and contributors"]
 
 [deps]
