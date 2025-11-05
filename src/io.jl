@@ -82,7 +82,7 @@ Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/Arc
 The `options` keyword argument can be used to pass GDAL open options.
 """
 function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwargs...)
-    _isvalidlocal(fn) || error("File not found.")
+    _isvalidlocal(fn) || error("Can't find local file $fn.")
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
         if AG.nlayer(ds) > 1 && isnothing(layer)

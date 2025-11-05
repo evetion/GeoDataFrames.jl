@@ -211,5 +211,9 @@ function _reproject(
 end
 
 function _isvalidlocal(fn)
-    startswith(fn, "/vsi") || occursin(":", fn) || isfile(fn) || isdir(fn)
+    startswith(fn, "/vsi") ||
+        startswith(fn, "\\\\") ||
+        occursin("://", fn) ||
+        isfile(fn) ||
+        isdir(fn)
 end
