@@ -23,12 +23,3 @@ Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T} = GeometryVecto
 # Mutable array interface
 # TODO Invalidate spatial index on mutations
 Base.deleteat!(G::GeometryVector, i) = (deleteat!(parent(G), i); G)
-Base.push!(G::GeometryVector, x) = (push!(parent(G), x); G)
-Base.pop!(G::GeometryVector) = pop!(parent(G))
-Base.pushfirst!(G::GeometryVector, x) = (pushfirst!(parent(G), x); G)
-Base.popfirst!(G::GeometryVector) = popfirst!(parent(G))
-Base.insert!(G::GeometryVector, i::Integer, x) = (insert!(parent(G), i, x); G)
-Base.append!(G::GeometryVector, items) = (append!(parent(G), items); G)
-Base.prepend!(G::GeometryVector, items) = (prepend!(parent(G), items); G)
-Base.resize!(G::GeometryVector, n::Integer) = (resize!(parent(G), n); G)
-Base.empty!(G::GeometryVector) = (empty!(parent(G)); G)
