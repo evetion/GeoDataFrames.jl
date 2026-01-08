@@ -19,3 +19,7 @@ Base.setindex!(G::GeometryVector, v, i::Int) = setindex!(parent(G), v, i)
 
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
 Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T} = GeometryVector(similar(parent(G), T, dims))
+
+# Mutable array interface
+# TODO Invalidate spatial index on mutations
+Base.deleteat!(G::GeometryVector, i) = (deleteat!(parent(G), i); G)

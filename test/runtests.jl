@@ -444,6 +444,28 @@ end
     @test GI.geometrycolumns(t) == (:geom,)
 end
 
+@testitem "GeometryVector mutability" setup = [Setup] begin
+    using DataFrames
+
+    # Test deleteat! directly on GeometryVector
+    gv = GDF.GeometryVector(AG.createpoint.(coords))
+    @test length(gv) == 10
+    deleteat!(gv, 5)
+    @test length(gv) == 9
+
+    # Test with DataFrame filtering (the original issue scenario)
+    df = DataFrame(geometry=GDF.GeometryVector(AG.createpoint.(coords)), name="test")
+    @test nrow(df) == 10
+    filter!(row -> row.name == "test", df)
+    @test nrow(df) == 10
+
+    # Test with subset removal
+    df2 = DataFrame(geometry=GDF.GeometryVector(AG.createpoint.(coords)), value=1:10)
+    filter!(row -> row.value > 5, df2)
+    @test nrow(df2) == 5
+    @test length(df2.geometry) == 5
+end
+
 filter(ti) = !(:nowindows in ti.tags && Sys.iswindows())
 
 @run_package_tests filter = filter
