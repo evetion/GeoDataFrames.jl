@@ -23,7 +23,7 @@ GeoDataFrames.write("test.foo", df)
 ERROR: ArgumentError: There are no GDAL drivers for the .foo extension
 ```
 
-You can specifiy the GDAL driver using a keyword as follows:
+You can specify the GDAL driver using a keyword as follows:
 ```julia
 GeoDataFrames.write("test.foo", df; driver="GeoJSON")
 ```

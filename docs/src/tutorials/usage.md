@@ -55,7 +55,7 @@ GeoDataFrames.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", 
 
 
 ## Writing
-Write a DataFrame is done by the [`write`](@ref) function. It simply takes a filename, and a DataFrame with a geometry column.
+Writing a DataFrame is done by the [`write`](@ref) function. It simply takes a filename, and a DataFrame with a geometry column.
 
 ```julia
 points = GeoInterface.Point.(rand(10), rand(10))

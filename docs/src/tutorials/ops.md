@@ -88,7 +88,7 @@ dfr = GeometryOps.reproject(df, EPSG(4326), EPSG(28992))
   10 │ (-458280.0, -5.72039e6)   test
 ```
 
-Note that by using GeometryOps, point geometries are reproject to a tuple of coordinates, which is treated as a valid Point geometry.
+Note that by using GeometryOps, point geometries are reprojected to a tuple of coordinates, which is treated as a valid Point geometry.
 
 ## Plotting
 
