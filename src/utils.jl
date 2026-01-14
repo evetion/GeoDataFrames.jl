@@ -6,6 +6,38 @@ function stringlist(dict::Dict{String, String})
     return sv
 end
 
+function dictstring(sv::Vector{String})
+    dict = Dict{String, String}()
+    for s in sv
+        kv = split(s, '=', limit=2)
+        if length(kv) == 2
+            dict[kv[1]] = kv[2]
+        else
+            @warn "Ignoring key-value metadata string: $s"
+        end
+    end
+    return dict
+end
+
+function setmetadatalayer!(layer, table)
+    for (k, v) in DataAPI.metadata(table)
+        if v isa Dict
+            for (dk, dv) in pairs(v)
+                @debug "Writing metadata item $dk = $dv for domain $k"
+                AG.GDAL.gdalsetmetadataitem(
+                    layer.ptr,
+                    string(dk),
+                    string(dv),
+                    string(k),
+                )
+            end
+        else
+            @debug "Writing metadata item $k = $v for domain ''"
+            AG.GDAL.gdalsetmetadataitem(layer.ptr, string(k), string(v), "")
+        end
+    end
+end
+
 function getgeometrycolumns(table)
     if GI.isfeaturecollection(table)
         return GI.geometrycolumns(table)

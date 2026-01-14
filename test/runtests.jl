@@ -466,6 +466,19 @@ end
     @test length(df2.geometry) == 5
 end
 
+@testitem "Metadata" setup = [Setup] begin
+    df = DataFrame(a=1, geometry=[(1.,2.)])
+    DataAPI.metadata!(df, "author", "test")
+    DataAPI.colmetadata!(df, :a, "description", "A normal column")
+    DataAPI.colmetadata!(df, :geometry, "description", "A point geometry")
+    GeoDataFrames.write("metadata.gpkg", df)
+    dfn = GeoDataFrames.read("metadata.gpkg")
+    @test DataAPI.metadata(dfn)["author"] == "test"
+    # Column metadata is not supported by GDAL
+    @test isnothing(get(DataAPI.colmetadata(dfn), :a, nothing))
+    @test isnothing(get(DataAPI.colmetadata(dfn), :geometry, nothing))
+end
+
 filter(ti) = !(:nowindows in ti.tags && Sys.iswindows())
 
 @run_package_tests filter = filter
