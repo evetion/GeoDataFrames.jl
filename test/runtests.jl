@@ -477,6 +477,10 @@ end
     # Column metadata is not supported by GDAL
     @test isnothing(get(DataAPI.colmetadata(dfn), :a, nothing))
     @test isnothing(get(DataAPI.colmetadata(dfn), :geometry, nothing))
+
+    t = GDF.read(fn)
+    @test DataAPI.metadata(t)["DBF_DATE_LAST_UPDATE"] == "2007-08-16"
+    @test DataAPI.metadata(t)["SHAPEFILE"] isa Dict
 end
 
 filter(ti) = !(:nowindows in ti.tags && Sys.iswindows())

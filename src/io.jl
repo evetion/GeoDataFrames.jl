@@ -94,7 +94,7 @@ function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwarg
 end
 
 function read(::ArchGDALDriver, ds, layer)
-    df, gnames, sr = AG.getlayer(ds, layer) do table
+    df, gnames, sr, metadata = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(
                 ArgumentError(
@@ -114,10 +114,7 @@ function read(::ArchGDALDriver, ds, layer)
         names, x = AG.schema_names(AG.layerdefn(table))
         sr = AG.getspatialref(table)
         df = DataFrame(table)
-        for (k, v) in pairs(metadata)
-            DataAPI.metadata!(df, k, v, style = :note)
-        end
-        return df, names, sr
+        return df, names, sr, metadata
     end
     if "" in names(df)
         rename!(df, Symbol("") => :geometry)
@@ -128,6 +125,10 @@ function read(::ArchGDALDriver, ds, layer)
     end
     crs = sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr))
     geometrycolumns = Tuple(gnames)
+
+    for (k, v) in pairs(metadata)
+        DataAPI.metadata!(df, k, v, style = :note)
+    end
     metadata!(df, "crs", crs; style = :note)
     metadata!(df, "geometrycolumns", geometrycolumns; style = :note)
 
