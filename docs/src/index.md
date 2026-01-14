@@ -106,7 +106,7 @@ using GeoDataFrames, GeoArrow
 
 ::: info Bugs, errors and making issues for GeoDataFrames.jl
 
-Because there are so many vector file types and variations of them, most of the time we need the `exact file` that caused your problem to know how to fix it, and be sure that we have actually fixed it when we are done. So fixing a GeoDataFrames.jl bug nearly always involves downloading some file and running some code that breaks with it (if you can trigger the bug without a file, that's great! but its not always possible).
+Because there are so many vector file types and variations of them, most of the time we need the `exact file` that caused your problem to know how to fix it, and be sure that we have actually fixed it when we are done. So fixing a GeoDataFrames.jl bug nearly always involves downloading some file and running some code that breaks with it (if you can trigger the bug without a file, that's great! but it's not always possible).
 
 To make an issue we can fix quickly (or at all) there are three key steps:
 1. Include the file in an accessible place on web `without authentication` or any other work on our part, so we can just get it and find your bug. You can put it on a file hosting platform (e.g. google drive, drop box, whatever you use) and share the url.
