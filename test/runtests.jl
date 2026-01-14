@@ -25,6 +25,9 @@ end
     t = GDF.read(fn)
     @test nrow(t) == 42
     @test "ID" in names(t)
+
+    @test DataAPI.metadata(t)["DBF_DATE_LAST_UPDATE"] == "2007-08-16"
+    @test DataAPI.metadata(t)["SHAPEFILE"] isa Dict
 end
 
 @testitem "Read non-existent shapefile" setup = [Setup] begin
