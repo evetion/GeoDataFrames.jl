@@ -94,7 +94,7 @@ function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwarg
 end
 
 function read(::ArchGDALDriver, ds, layer)
-    df, gnames, sr = AG.getlayer(ds, layer) do table
+    df, gnames, sr, metadata = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(
                 ArgumentError(
@@ -102,9 +102,19 @@ function read(::ArchGDALDriver, ds, layer)
                 ),
             )
         end
+        domains = AG.GDAL.gdalgetmetadatadomainlist(table.ptr)
+        metadata = Dict{String, Any}()
+        for domain in domains
+            if domain == ""
+                merge!(metadata, dictstring(AG.GDAL.gdalgetmetadata(table.ptr, domain)))
+            else
+                metadata[domain] = dictstring(AG.GDAL.gdalgetmetadata(table.ptr, domain))
+            end
+        end
         names, x = AG.schema_names(AG.layerdefn(table))
         sr = AG.getspatialref(table)
-        return DataFrame(table), names, sr
+        df = DataFrame(table)
+        return df, names, sr, metadata
     end
     if "" in names(df)
         rename!(df, Symbol("") => :geometry)
@@ -115,6 +125,10 @@ function read(::ArchGDALDriver, ds, layer)
     end
     crs = sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr))
     geometrycolumns = Tuple(gnames)
+
+    for (k, v) in pairs(metadata)
+        DataAPI.metadata!(df, k, v, style = :note)
+    end
     metadata!(df, "crs", crs; style = :note)
     metadata!(df, "geometrycolumns", geometrycolumns; style = :note)
 
@@ -270,6 +284,10 @@ function write(
                     push!(fieldindices, AG.findfieldindex(layer, name, false))
                 end
 
+                if DataAPI.metadatasupport(typeof(table)).read
+                    setmetadatalayer!(layer, table)
+                end
+
                 for chunk in Iterators.partition(rows, chunksize)
                     can_use_transaction &&
                         AG.GDAL.gdaldatasetstarttransaction(ds.ptr, false)
@@ -308,12 +326,15 @@ function write(
                 end
                 if !can_create_layer
                     @warn "Can't create layers in this format, copying from memory instead."
-                    AG.copy(
+                    nlayer = AG.copy(
                         layer;
                         dataset = ds,
                         name = layer_name,
                         options = stringlist(options),
                     )
+                    if DataAPI.metadatasupport(typeof(table)).read
+                        setmetadatalayer!(nlayer, table)
+                    end
                 end
             end
         end
