@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extent metadata support.
 - Improved show methods for GeoDataFrames and GeometryVectors.
 
+## v0.4.2
+
+### Added
+- Implements metadata passthrough for GDAL, allowing table metadata to be preserved on reading/writing when supported by the driver.
+
+### Fixed
+- `GeometryVector` now implement `deleteat!` correctly, so DataFrames `filter!` and similar functions work as expected.
+
 ## v0.4.1
 
 ### Added
