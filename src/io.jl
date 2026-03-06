@@ -48,9 +48,12 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
 Read a file into a DataFrame. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
 """
 function read(fn; kwargs...)
+    gfn = _gdal_path(fn)
     ext = last(splitext(fn))
-    dr = driver(ext)
-    df = read(dr, fn; kwargs...)
+    # Force ArchGDALDriver for paths rewritten to GDAL virtual filesystems,
+    # since native drivers can't handle /vsi* paths.
+    dr = gfn == fn ? driver(ext) : ArchGDALDriver()
+    df = read(dr, gfn; kwargs...)
     for geom in getgeometrycolumns(df)
         df[!, geom] = GeometryVector(df[!, geom])
     end
@@ -82,6 +85,7 @@ Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/Arc
 The `options` keyword argument can be used to pass GDAL open options.
 """
 function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwargs...)
+    fn = _gdal_path(fn)
     _isvalidlocal(fn) || error("Can't find local file $fn.")
     t = AG.read(fn; kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")

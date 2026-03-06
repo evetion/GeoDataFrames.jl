@@ -249,3 +249,96 @@ function _isvalidlocal(fn)
         isfile(fn) ||
         isdir(fn)
 end
+
+# Cloud storage URL schemes mapped to GDAL virtual filesystem prefixes.
+# These schemes are stripped and replaced: s3://bucket/key → /vsis3/bucket/key
+const _vsi_cloud_schemes = Dict(
+    "s3" => "/vsis3/",
+    "gs" => "/vsigs/",
+    "az" => "/vsiaz/",
+    "oss" => "/vsioss/",
+    "swift" => "/vsiswift/",
+)
+
+# Archive file extensions mapped to GDAL virtual filesystem prefixes.
+# Ordered longest-first so that `.tar.gz` matches before `.tar` or `.gz`.
+const _vsi_archive_extensions = [
+    ".tar.gz" => "/vsitar/",
+    ".tgz" => "/vsitar/",
+    ".tar" => "/vsitar/",
+    ".zip" => "/vsizip/",
+    ".kmz" => "/vsizip/",
+    ".ods" => "/vsizip/",
+    ".xlsx" => "/vsizip/",
+    ".gz" => "/vsigzip/",
+    ".7z" => "/vsi7z/",
+    ".lpk" => "/vsi7z/",
+    ".lpkx" => "/vsi7z/",
+    ".mpk" => "/vsi7z/",
+    ".mpkx" => "/vsi7z/",
+    ".ppkx" => "/vsi7z/",
+    ".rar" => "/vsirar/",
+]
+
+"""
+    _gdal_path(fn::AbstractString)
+
+Transform a file path to use GDAL virtual filesystem prefixes when needed.
+
+Handles three categories automatically:
+- **Cloud storage schemes** (`s3://`, `gs://`, `az://`, `oss://`, `swift://`):
+  stripped and replaced, e.g. `s3://bucket/key` → `/vsis3/bucket/key`.
+- **Network URLs** (`http://`, `https://`, `ftp://`): prepended with `/vsicurl/`.
+- **Archive extensions** (`.zip`, `.gz`, `.tar`, `.tar.gz`, `.tgz`, `.7z`, `.rar`,
+  `.kmz`, `.ods`, `.xlsx`, `.lpk`, `.lpkx`, `.mpk`, `.mpkx`, `.ppkx`):
+  wrapped with the corresponding `/vsi*/` prefix. Extensions are detected anywhere
+  in the path to support subpaths like `archive.zip/dir/file.shp`.
+
+Prefixes are chained when both apply, e.g.
+`https://host/data.zip` → `/vsizip//vsicurl/https://host/data.zip`.
+
+Paths already starting with `/vsi` are returned unchanged.
+"""
+function _gdal_path(fn::AbstractString)
+    startswith(fn, "/vsi") && return fn
+
+    result = fn
+
+    # Cloud storage schemes: strip scheme and prepend VSI prefix
+    m = match(r"^([a-z][a-z0-9]*)://", result)
+    if m !== nothing
+        scheme = m.captures[1]
+        if haskey(_vsi_cloud_schemes, scheme)
+            # +4 skips past the "://" separator and the 1-based index offset
+            result = _vsi_cloud_schemes[scheme] * result[ncodeunits(scheme)+4:end]
+        elseif scheme in ("http", "https", "ftp")
+            result = "/vsicurl/" * result
+        end
+    end
+
+    # Archive extensions: wrap with corresponding VSI prefix
+    for (ext, prefix) in _vsi_archive_extensions
+        if _has_vsi_extension(result, ext)
+            result = prefix * result
+            break
+        end
+    end
+
+    if result != fn
+        @info "Rewriting path to GDAL virtual filesystem path: \"$fn\" → \"$result\""
+    end
+
+    return result
+end
+
+"""
+    _has_vsi_extension(fn, ext)
+
+Check whether `fn` contains archive extension `ext` at a valid path boundary
+(end of string or followed by `/` or `\\`). Case-insensitive.
+"""
+function _has_vsi_extension(fn::AbstractString, ext::AbstractString)
+    escaped = replace(ext, "." => raw"\.")
+    re = Regex(escaped * raw"(?=[/\\]|$)", "i")
+    return occursin(re, fn)
+end

@@ -482,6 +482,74 @@ end
     @test isnothing(get(DataAPI.colmetadata(dfn), :geometry, nothing))
 end
 
+@testitem "GDAL virtual filesystem paths" setup = [Setup] begin
+    # HTTP/HTTPS/FTP URLs get /vsicurl/ prefix
+    @test GDF._gdal_path("https://example.com/file.gpkg") == "/vsicurl/https://example.com/file.gpkg"
+    @test GDF._gdal_path("http://example.com/file.gpkg") == "/vsicurl/http://example.com/file.gpkg"
+    @test GDF._gdal_path("ftp://example.com/file.gpkg") == "/vsicurl/ftp://example.com/file.gpkg"
+
+    # Cloud storage schemes are stripped and replaced
+    @test GDF._gdal_path("s3://bucket/key.tif") == "/vsis3/bucket/key.tif"
+    @test GDF._gdal_path("gs://bucket/key.tif") == "/vsigs/bucket/key.tif"
+    @test GDF._gdal_path("az://container/blob.tif") == "/vsiaz/container/blob.tif"
+    @test GDF._gdal_path("oss://bucket/key.tif") == "/vsioss/bucket/key.tif"
+    @test GDF._gdal_path("swift://container/obj.tif") == "/vsiswift/container/obj.tif"
+
+    # Archive extensions get wrapped with appropriate prefix
+    @test GDF._gdal_path("data.zip") == "/vsizip/data.zip"
+    @test GDF._gdal_path("/path/to/data.zip") == "/vsizip//path/to/data.zip"
+    @test GDF._gdal_path("data.ZIP") == "/vsizip/data.ZIP"
+    @test GDF._gdal_path("data.gz") == "/vsigzip/data.gz"
+    @test GDF._gdal_path("data.tar") == "/vsitar/data.tar"
+    @test GDF._gdal_path("data.tgz") == "/vsitar/data.tgz"
+    @test GDF._gdal_path("data.tar.gz") == "/vsitar/data.tar.gz"
+    @test GDF._gdal_path("data.7z") == "/vsi7z/data.7z"
+    @test GDF._gdal_path("data.rar") == "/vsirar/data.rar"
+    @test GDF._gdal_path("data.kmz") == "/vsizip/data.kmz"
+
+    # Archive extensions detected mid-path (subpath inside archive)
+    @test GDF._gdal_path("data.zip/subdir/file.shp") == "/vsizip/data.zip/subdir/file.shp"
+    @test GDF._gdal_path("data.tar.gz/file.tif") == "/vsitar/data.tar.gz/file.tif"
+
+    # Combined: remote archives chain both prefixes
+    @test GDF._gdal_path("https://example.com/data.zip") == "/vsizip//vsicurl/https://example.com/data.zip"
+    @test GDF._gdal_path("http://example.com/data.tar.gz/f.tif") == "/vsitar//vsicurl/http://example.com/data.tar.gz/f.tif"
+    @test GDF._gdal_path("s3://bucket/data.zip/file.shp") == "/vsizip//vsis3/bucket/data.zip/file.shp"
+
+    # Existing /vsi prefixes are not modified
+    @test GDF._gdal_path("/vsicurl/https://example.com/file.gpkg") == "/vsicurl/https://example.com/file.gpkg"
+    @test GDF._gdal_path("/vsizip/data.zip") == "/vsizip/data.zip"
+    @test GDF._gdal_path("/vsizip/vsicurl/https://example.com/data.zip") == "/vsizip/vsicurl/https://example.com/data.zip"
+
+    # Local paths without special extensions are unchanged
+    @test GDF._gdal_path("data.gpkg") == "data.gpkg"
+    @test GDF._gdal_path("/path/to/data.gpkg") == "/path/to/data.gpkg"
+
+    # Extension must be at a path boundary, not mid-word
+    @test GDF._gdal_path("my.zipcode") == "my.zipcode"
+    @test GDF._gdal_path("my.gzip") == "my.gzip"
+end
+
+@testitem "Read remote file via vsicurl" setup = [Setup] tags = [:network] begin
+    import ArchGDAL as AG
+    AG.setconfigoption("GDAL_HTTP_UNSAFESSL", "YES")
+    # GeoJSON from the GDAL test suite (text file, not LFS)
+    url = "https://raw.githubusercontent.com/OSGeo/gdal/master/autotest/ogr/data/geojson/point.geojson"
+    df = GDF.read(url)
+    @test nrow(df) > 0
+    @test "geometry" in names(df)
+end
+
+@testitem "Read remote zip via vsicurl+vsizip" setup = [Setup] tags = [:network] begin
+    import ArchGDAL as AG
+    AG.setconfigoption("GDAL_HTTP_UNSAFESSL", "YES")
+    # Zipped shapefile from the GDAL test suite
+    url = "https://raw.githubusercontent.com/OSGeo/gdal/master/autotest/ogr/data/shp/poly.zip"
+    df = GDF.read(url)
+    @test nrow(df) == 10
+    @test "geometry" in names(df)
+end
+
 filter(ti) = !(:nowindows in ti.tags && Sys.iswindows())
 
 @run_package_tests filter = filter
