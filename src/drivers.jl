@@ -1,27 +1,45 @@
 abstract type AbstractDriver end
 
 """
-GeoJSON driver
+    GeoJSONDriver()
+
+Driver for reading and writing GeoJSON files, backed by the `GeoJSON` package.
+Load `GeoJSON` to enable it.
 """
 struct GeoJSONDriver <: AbstractDriver end
 """
-Shapefile driver
+    ShapefileDriver()
+
+Driver for reading and writing ESRI Shapefiles, backed by the `Shapefile` package.
+Load `Shapefile` to enable it.
 """
 struct ShapefileDriver <: AbstractDriver end
 """
-GeoParquet driver
+    GeoParquetDriver()
+
+Driver for reading and writing (Geo)Parquet files, backed by the `GeoParquet` package.
+Load `GeoParquet` to enable it.
 """
 struct GeoParquetDriver <: AbstractDriver end
 """
-FlatGeobuf driver
+    FlatGeobufDriver()
+
+Driver for reading and writing FlatGeobuf files, backed by the `FlatGeobuf` package.
+Load `FlatGeobuf` to enable it.
 """
 struct FlatGeobufDriver <: AbstractDriver end
 """
-ArchGDAL driver (default)
+    ArchGDALDriver()
+
+Default driver, backed by the `ArchGDAL` package. Supports a wide range of formats and is
+always available, requiring no extra package to be loaded.
 """
 struct ArchGDALDriver <: AbstractDriver end
 """
-GeoArrow driver
+    GeoArrowDriver()
+
+Driver for reading and writing (Geo)Arrow files, backed by the `GeoArrow` package.
+Load `GeoArrow` to enable it.
 """
 struct GeoArrowDriver <: AbstractDriver end
 

@@ -5,6 +5,7 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://evetion.github.io/GeoDataFrames.jl/dev)
 [![CI](https://github.com/evetion/GeoDataFrames.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/evetion/GeoDataFrames.jl/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/evetion/GeoDataFrames.jl/branch/master/graph/badge.svg?token=38QJAX7H9I)](https://codecov.io/gh/evetion/GeoDataFrames.jl)
+[![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 
 GeoDataFrames provides a simple and efficient way to work with geospatial vector data in Julia. By combining the power of DataFrames with [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/) and native Julia packages such as [GeometryOps](https://juliageo.org/GeometryOps.jl/stable/), it offers a familiar interface for handling geographical data while maintaining Julia's performance advantages. The package supports reading and writing various geospatial formats, making it easy to integrate into your data analysis workflows. GeoDataFrames takes its inspiration from Python's [GeoPandas](https://geopandas.org/en/stable/).
