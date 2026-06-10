@@ -2,7 +2,7 @@
 
 julia_version = "1.12.1"
 manifest_format = "2.0"
-project_hash = "49e622bff042602282e9a089fd45b0dba828a204"
+project_hash = "33e38c4a15a548f55493e68a408e3817a8e153ae"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -767,14 +767,13 @@ uuid = "5bc3a8d9-1bfb-4624-ba94-a391279174d6"
 version = "0.2.0"
 
 [[deps.GeoDataFrames]]
-deps = ["ArchGDAL", "DataAPI", "DataFrames", "Extents", "GeoFormatTypes", "GeoInterface", "GeometryOps", "Pkg", "Proj", "Reexport", "Tables"]
+deps = ["ArchGDAL", "DataAPI", "DataFrames", "Extents", "GeoFormatTypes", "GeoInterface", "GeometryOps", "Proj", "Reexport", "Tables"]
 path = ".."
 uuid = "62cb38b5-d8d2-4862-a48e-6a340996859f"
-version = "0.4.0"
-weakdeps = ["FileIO", "FlatGeobuf", "GeoArrow", "GeoJSON", "GeoParquet", "Shapefile"]
+version = "0.4.2"
+weakdeps = ["FlatGeobuf", "GeoArrow", "GeoJSON", "GeoParquet", "Shapefile"]
 
     [deps.GeoDataFrames.extensions]
-    GeoDataFramesFileIOExt = "FileIO"
     GeoDataFramesFlatGeobufExt = "FlatGeobuf"
     GeoDataFramesGeoArrowExt = "GeoArrow"
     GeoDataFramesGeoJSONExt = "GeoJSON"
@@ -788,9 +787,9 @@ version = "0.4.4"
 
 [[deps.GeoInterface]]
 deps = ["DataAPI", "Extents", "GeoFormatTypes"]
-git-tree-sha1 = "b7c5cdf45298877bb683bdda3f871ff7070985c4"
+git-tree-sha1 = "2b0312a0c06b4408773c6dc1829b472ea706f058"
 uuid = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
-version = "1.6.0"
+version = "1.6.1"
 weakdeps = ["GeometryBasics", "Makie", "RecipesBase"]
 
     [deps.GeoInterface.extensions]

@@ -45,7 +45,24 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
 """
     read(fn::AbstractString; kwargs...)
 
-Read a file into a DataFrame. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+Read a file into a `DataFrame`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+
+Returns a `DataFrame` whose geometry column(s) hold GeoInterface.jl compatible geometries, with
+the coordinate reference system and geometry column names stored as table metadata.
+
+# Example
+```jldoctest
+julia> df = DataFrame(geometry = GeoInterface.Point.([(1.0, 2.0), (3.0, 4.0)]), name = ["a", "b"]);
+
+julia> path = GeoDataFrames.write(joinpath(tempdir(), "example.gpkg"), df);
+
+julia> df2 = GeoDataFrames.read(path);
+
+julia> names(df2)
+2-element Vector{String}:
+ "geometry"
+ "name"
+```
 """
 function read(fn; kwargs...)
     gfn = _gdal_path(fn)
@@ -60,16 +77,10 @@ function read(fn; kwargs...)
     df
 end
 
-@deprecate read(fn::AbstractString, layer::Union{AbstractString, Integer}; kwargs...) read(
-    fn;
-    layer,
-    kwargs...,
-)
-
 """
     read(driver::AbstractDriver, fn::AbstractString; kwargs...)
 
-Read a file into a DataFrame using the specified `driver`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+Read a file into a DataFrame using the specified `driver`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref). Returns a `DataFrame`.
 """
 function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
     @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
@@ -82,7 +93,7 @@ end
 Read a file into a DataFrame using the ArchGDAL driver.
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
-The `options` keyword argument can be used to pass GDAL open options.
+The `options` keyword argument can be used to pass GDAL open options. Returns a `DataFrame`.
 """
 function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwargs...)
     fn = _gdal_path(fn)
@@ -146,6 +157,18 @@ end
     write(fn::AbstractString, table; kwargs...)
 
 Write the provided `table` to `fn`. A driver is selected based on the extension of `fn`.
+
+Returns the path `fn` that was written.
+
+# Example
+```jldoctest
+julia> df = DataFrame(geometry = GeoInterface.Point.([(1.0, 2.0), (3.0, 4.0)]), name = ["a", "b"]);
+
+julia> path = GeoDataFrames.write(joinpath(tempdir(), "example.gpkg"), df);
+
+julia> isfile(path)
+true
+```
 """
 function write(fn::AbstractString, table; kwargs...)
     ext = last(splitext(fn))
@@ -155,7 +178,7 @@ end
 """
     write(driver::AbstractDriver, fn::AbstractString, table; kwargs...)
 
-Write the provided `table` to `fn` using the specified driver. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+Write the provided `table` to `fn` using the specified driver. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref). Returns the path `fn` that was written.
 """
 function write(driver::AbstractDriver, fn::AbstractString, table; kwargs...)
     @debug "Using GDAL for writing, import $(package(driver)) for a native driver."
@@ -165,7 +188,7 @@ end
 """
     write(driver::ArchGDALDriver, fn::AbstractString, table; layer_name="data", crs::Union{GFT.GeoFormat,Nothing}=getcrs(table), driver::Union{Nothing,AbstractString}=nothing, options::Dict{String,String}=Dict(), geom_columns::Tuple{Symbol}=getgeometrycolumns(table), kwargs...)
 
-Write the provided `table` to `fn` using the ArchGDAL driver.
+Write the provided `table` to `fn` using the ArchGDAL driver. Returns the path `fn` that was written.
 """
 function write(
     ::ArchGDALDriver,
