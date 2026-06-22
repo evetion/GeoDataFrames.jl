@@ -1,13 +1,16 @@
 module GeoDataFrames
 
 import ArchGDAL as AG
-using DataFrames
-using Tables
+using DataFrames: DataFrames, DataFrame, DataFrameRow, metadata, metadata!, rename!
+using Tables: Tables
 import GeoFormatTypes as GFT
 import GeoInterface as GI
-using DataAPI
-using Reexport
+using GeoInterface: GeoInterface
+using Extents: Extents
+using DataAPI: DataAPI
+using Reexport: Reexport, @reexport
 import GeometryOps as GO
+using GeometryOps: GeometryOps
 import Proj  # For GO reproject
 
 include("vector.jl")

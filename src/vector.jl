@@ -1,7 +1,18 @@
 """
-    GeometryVector(A)
+    GeometryVector(A::Vector)
 
-A vector of geometries, as used in GeoDataFrames.
+A thin wrapper around a `Vector` of geometries, used as the geometry column type in
+GeoDataFrames. It behaves like a regular `AbstractVector` (indexing, mutation, `similar`),
+and exists as a distinct type so geometry-specific behaviour (such as a future spatial index)
+can be attached. Geometry columns returned by [`read`](@ref) are wrapped in a `GeometryVector`.
+
+# Example
+```jldoctest
+julia> gv = GeoDataFrames.GeometryVector([GeoInterface.Point(1.0, 2.0), GeoInterface.Point(3.0, 4.0)]);
+
+julia> length(gv)
+2
+```
 """
 struct GeometryVector{T} <: AbstractArray{T, 1}
     A::Vector{T}

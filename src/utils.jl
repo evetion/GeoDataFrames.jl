@@ -162,7 +162,7 @@ setcrs!(df::DataFrame, crs) = metadata!(df, "GEOINTERFACE:crs", crs; style = :no
 Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `target_crs`, from the current CRS.
 See also [`reproject(df, source_crs, target_crs)`](@ref) and the in place version [`reproject!(df, target_crs)`](@ref).
 `always_xy` (`true` by default) can override the default axis mapping strategy of the CRS. If true, input is 
-assumed to be in the traditional GIS order (longitude, latitude).
+assumed to be in the traditional GIS order (longitude, latitude). Returns a new `DataFrame`; the input `df` is left unchanged.
 """
 function GO.reproject(
     df::DataFrame,
@@ -177,7 +177,7 @@ end
     reproject(df::DataFrame, source_crs, target_crs; [always_xy=true])
 
 Reproject the geometries in a DataFrame `df` from the crs `source_crs` to a new crs `target_crs`.
-This overrides any current CRS of the Dataframe.
+This overrides any current CRS of the Dataframe. Returns a new `DataFrame`; the input `df` is left unchanged.
 """
 function GO.reproject(
     df::DataFrame,
@@ -199,7 +199,7 @@ end
 """
     reproject!(df::DataFrame, target_crs; [always_xy=true])
 
-Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `target_crs`, from the current CRS, in place.
+Reproject the geometries in a DataFrame `df` to a new Coordinate Reference System `target_crs`, from the current CRS, in place. Returns the modified `df`.
 """
 function reproject!(df::DataFrame, target_crs; always_xy = true, kwargs...)
     reproject!(df, getcrs(df), target_crs; always_xy, kwargs...)
@@ -209,7 +209,7 @@ end
     reproject!(df::DataFrame, source_crs, target_crs; [always_xy=true])
 
 Reproject the geometries in a DataFrame `df` from the crs `source_crs` to a new crs `target_crs` in place.
-This overrides any current CRS of the Dataframe.
+This overrides any current CRS of the Dataframe. Returns the modified `df`.
 """
 function reproject!(df::DataFrame, source_crs, target_crs; always_xy = true, kwargs...)
     columns = Tables.columns(df)

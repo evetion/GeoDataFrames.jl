@@ -21,6 +21,42 @@ include("data.jl")
     )
 end
 
+@testitem "Aqua" begin
+    import Aqua
+    import GeoDataFrames
+    import DataFrames
+    # GeoDataFrames intentionally implements GeoInterface methods on DataFrames'
+    # types to expose DataFrames as geospatial tables, so treat those as own.
+    # `persistent_tasks` is disabled: its nested precompilation subprocess is
+    # fragile with the heavy GDAL/PROJ/GEOS JLL dependency tree, and the package
+    # has no persistent tasks.
+    Aqua.test_all(
+        GeoDataFrames;
+        piracies = (; treat_as_own = [DataFrames.DataFrame, DataFrames.DataFrameRow]),
+        persistent_tasks = false,
+    )
+end
+
+@testitem "ExplicitImports" begin
+    import ExplicitImports
+    import GeoDataFrames
+    # The two qualified-access checks are disabled: GeoDataFrames is a thin
+    # wrapper over GDAL and necessarily reaches into ArchGDAL/GDAL/GeoInterface/
+    # Tables/DataAPI internals (e.g. `AG.GDAL.gdal*`, `AG.wkbPoint`,
+    # `GeoInterface.coordinates`). Those bindings are the de-facto API but are
+    # not declared `public` upstream, and `AG.GDAL.*` is owned by GDAL rather
+    # than ArchGDAL. `all_explicit_imports_are_public` is gated to Julia 1.11+,
+    # where public-ness is determined via `Base.ispublic` rather than the
+    # `Base.isexported` fallback (which false-positives on imported module
+    # names). The remaining checks guard against regressions.
+    ExplicitImports.test_explicit_imports(
+        GeoDataFrames;
+        all_explicit_imports_are_public = VERSION >= v"1.11",
+        all_qualified_accesses_via_owners = false,
+        all_qualified_accesses_are_public = false,
+    )
+end
+
 @testitem "Read shapefile" setup = [Setup] begin
     t = GDF.read(fn)
     @test nrow(t) == 42
@@ -36,26 +72,26 @@ end
 end
 
 @testitem "Read shapefile with layer id" setup = [Setup] begin
-    t = GDF.read(fn, 0)
+    t = GDF.read(fn; layer = 0)
     @test nrow(t) == 42
     @test "ID" in names(t)
 end
 
 @testitem "Drivers" setup = [Setup] begin
-    t = GDF.read(fn, 0)
+    t = GDF.read(fn; layer = 0)
     GDF.write(joinpath(testdatadir, "test.csv"), t)
     GDF.write(joinpath(testdatadir, "test.arrow"), t)
     GDF.write(joinpath(testdatadir, "test.pdf"), t)
 end
 
 @testitem "Read shapefile with layer name" setup = [Setup] begin
-    t = GDF.read(fn, "sites")
+    t = GDF.read(fn; layer = "sites")
     @test nrow(t) == 42
     @test "ID" in names(t)
 end
 
 @testitem "Read shapefile with non-existing layer name" setup = [Setup] begin
-    @test_throws ArgumentError GDF.read(fn, "foo")
+    @test_throws ArgumentError GDF.read(fn; layer = "foo")
 end
 
 @testitem "Read shapefile with NULLs" setup = [Setup] begin
@@ -216,6 +252,53 @@ end
     GI.crs(::GI.FeatureCollectionTrait, ::Vector{<:NamedTuple}) = nothing
     GI.geometrycolumns(::Vector{<:NamedTuple}) = (:foo,)
     @test isfile(GDF.write(tfn, table))
+end
+
+@testitem "Driver metadata" begin
+    import GeoDataFrames as GDF
+    drivers = (
+        (GDF.GeoJSONDriver(), :GeoJSON, "61d90e0f-e114-555e-ac52-39dfb47a3ef9"),
+        (GDF.ShapefileDriver(), :Shapefile, "8e980c4a-a4fe-5da2-b3a7-4b4b0353a2f4"),
+        (GDF.GeoParquetDriver(), :GeoParquet, "e99870d8-ce00-4fdd-aeee-e09192881159"),
+        (GDF.FlatGeobufDriver(), :FlatGeobuf, "d985ece1-97de-4d33-914c-38fb84042e15"),
+        (GDF.ArchGDALDriver(), :ArchGDAL, "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"),
+        (GDF.GeoArrowDriver(), :GeoArrow, "5bc3a8d9-1bfb-4624-ba94-a391279174d6"),
+    )
+    for (driver, pkg, id) in drivers
+        @test GDF.package(driver) === pkg
+        @test GDF.uuid(driver) == id
+    end
+end
+
+@testitem "GeoInterface feature interface" setup = [Setup] begin
+    df = GDF.read(fn; layer = 0)
+    geomcol = first(GI.geometrycolumns(df))
+
+    feature = GI.getfeature(df, 1)
+    @test feature isa DataFrameRow
+    @test GI.geometry(feature) == df[1, geomcol]
+    @test geomcol ∉ propertynames(GI.properties(feature))
+    @test GI.geometrycolumns(feature) == GI.geometrycolumns(df)
+    @test GI.crs(feature) == GI.crs(df)
+
+    features = GI.getfeature(df)
+    @test length(collect(features)) == nrow(df)
+end
+
+@testitem "dictstring malformed metadata" begin
+    import GeoDataFrames as GDF
+    @test GDF.dictstring(["FOO=bar"]) == Dict("FOO" => "bar")
+    @test_logs (:warn,) GDF.dictstring(["noseparator"])
+    @test GDF.dictstring(["noseparator"]) == Dict{String, String}()
+end
+
+@testitem "Invalid geometrycolumn type" setup = [Setup] begin
+    table = DataFrame(; foo = AG.createpoint.([[0, 0, 0]]), name = "test")
+    @test_throws "geometrycolumn must be a Symbol or a Tuple of Symbols" GDF.write(
+        joinpath(testdatadir, "test_invalid_geomcol.gpkg"),
+        table;
+        geometrycolumn = "foo",
+    )
 end
 
 @testitem "Metadata" setup = [Setup] begin

@@ -5,6 +5,7 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://evetion.github.io/GeoDataFrames.jl/dev)
 [![CI](https://github.com/evetion/GeoDataFrames.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/evetion/GeoDataFrames.jl/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/evetion/GeoDataFrames.jl/branch/master/graph/badge.svg?token=38QJAX7H9I)](https://codecov.io/gh/evetion/GeoDataFrames.jl)
+[![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 
 GeoDataFrames provides a simple and efficient way to work with geospatial vector data in Julia. By combining the power of DataFrames with [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/) and native Julia packages such as [GeometryOps](https://juliageo.org/GeometryOps.jl/stable/), it offers a familiar interface for handling geographical data while maintaining Julia's performance advantages. The package supports reading and writing various geospatial formats, making it easy to integrate into your data analysis workflows. GeoDataFrames takes its inspiration from Python's [GeoPandas](https://geopandas.org/en/stable/).
@@ -41,8 +42,8 @@ df = GDF.read("test_points.shp")
 
 You can also specify the layer index or layer name in opening, useful if there are multiple layers:
 ```julia
-GDF.read("test_points.shp", 0)
-GDF.read("test_points.shp", "test_points")
+GDF.read("test_points.shp", layer=0)
+GDF.read("test_points.shp", layer="test_points")
 ```
 
 Any keywords arguments are passed on to the underlying ArchGDAL [`read`](https://yeesian.com/ArchGDAL.jl/dev/reference/#ArchGDAL.read-Tuple%7BAbstractString%7D) function:
@@ -62,6 +63,7 @@ GDF.write("test_points.shp", df)
 
 You can also set options such as the layer_name, coordinate reference system, the [driver](https://gdal.org/drivers/vector/) and its options:
 ```julia
+using GeoFormatTypes
 GDF.write("test_points.shp", df; layer_name="data", crs=EPSG(4326), driver="FlatGeoBuf", options=Dict("SPATIAL_INDEX"=>"YES"))
 ```
 

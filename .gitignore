@@ -11,6 +11,10 @@ docs/src/*.png
 *.sha256
 .DS_Store
 Manifest.toml
+Manifest-v*.toml
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
 docs/final_site
 node_modules/
 test/data
