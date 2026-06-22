@@ -42,8 +42,8 @@ df = GDF.read("test_points.shp")
 
 You can also specify the layer index or layer name in opening, useful if there are multiple layers:
 ```julia
-GDF.read("test_points.shp", 0)
-GDF.read("test_points.shp", "test_points")
+GDF.read("test_points.shp", layer=0)
+GDF.read("test_points.shp", layer="test_points")
 ```
 
 Any keywords arguments are passed on to the underlying ArchGDAL [`read`](https://yeesian.com/ArchGDAL.jl/dev/reference/#ArchGDAL.read-Tuple%7BAbstractString%7D) function:
@@ -63,6 +63,7 @@ GDF.write("test_points.shp", df)
 
 You can also set options such as the layer_name, coordinate reference system, the [driver](https://gdal.org/drivers/vector/) and its options:
 ```julia
+using GeoFormatTypes
 GDF.write("test_points.shp", df; layer_name="data", crs=EPSG(4326), driver="FlatGeoBuf", options=Dict("SPATIAL_INDEX"=>"YES"))
 ```
 
