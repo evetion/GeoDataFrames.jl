@@ -26,7 +26,7 @@ function GeoDataFrames.read(::GeoJSONDriver, fname::AbstractString; kwargs...)
     return df
 end
 
-writekwargs = (:geometrycolumn,)
+const WRITEKWARGS = (:geometrycolumn,)
 
 """
     write(driver::GeoJSONDriver, fn::AbstractString, table; kwargs...)
@@ -35,7 +35,7 @@ Write the provided `table` to `fn` using the GeoJSONDriver driver.
 """
 function GeoDataFrames.write(::GeoJSONDriver, fname::AbstractString, data; kwargs...)
     kwargnames = keys(kwargs)
-    kwargnames ⊆ writekwargs ||
+    kwargnames ⊆ WRITEKWARGS ||
         @error "GeoJSON backend does not support $(setdiff(kwargnames, writekwargs)) as keyword arguments."
     GeoJSON.write(fname, data; kwargs...)
 end
