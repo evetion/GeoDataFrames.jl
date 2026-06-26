@@ -30,7 +30,7 @@ Write the provided `table` to `fn` using the FlatGeobufDriver driver.
 """
 function GeoDataFrames.write(::FlatGeobufDriver, fname::AbstractString, data; kwargs...)
     # No write support yet
-    @warn "FlatGeobuf backend cannot write files yet; falling back to ArchGDAL."
+    @warn "FlatGeobuf backend cannot write files yet; falling back to ArchGDAL." maxlog=2
     GeoDataFrames.write(ArchGDALDriver(), fname, data; kwargs...)
 end
 end

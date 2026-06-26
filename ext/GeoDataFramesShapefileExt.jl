@@ -17,7 +17,7 @@ function GeoDataFrames.read(
     return df
 end
 
-writekwargs = (:force,)
+const WRITEKWARGS = (:force, :geometrycolumn, :crs)
 
 function GeoDataFrames.write(
     ::GeoDataFrames.ShapefileDriver,
@@ -26,7 +26,7 @@ function GeoDataFrames.write(
     kwargs...,
 )
     kwargnames = keys(kwargs)
-    kwargnames ⊆ writekwargs ||
+    kwargnames ⊆ WRITEKWARGS ||
         @error "Shapefile backend does not support $(setdiff(kwargnames, writekwargs)) as keyword arguments."
     Shapefile.write(fname, data; kwargs...)
     fname
