@@ -128,10 +128,10 @@ function GI.properties(row::DataFrameRow)
     return row[DataFrames.Not(first(GI.geometrycolumns(row)))]
 end
 
-# Since `DataFrameRow` is simply a view of a DataFrame, we can reach back 
+# Since `DataFrameRow` is simply a view of a DataFrame, we can reach back
 # to the original DataFrame to get the metadata.
-GI.geometrycolumns(row::DataFrameRow) = GI.geometrycolumns(getfield(row, :df)) # get the parent of the row view
-GI.crs(row::DataFrameRow) = GI.crs(getfield(row, :df)) # get the parent of the row view
+GI.geometrycolumns(row::DataFrameRow) = GI.geometrycolumns(parent(row))
+GI.crs(row::DataFrameRow) = GI.crs(parent(row))
 
 """
     setgeometrycolumn!(df::DataFrame, column::Symbol)

@@ -29,7 +29,10 @@ Base.getindex(G::GeometryVector, i::Int) = getindex(parent(G), i)
 Base.setindex!(G::GeometryVector, v, i::Int) = setindex!(parent(G), v, i)
 
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
-Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T} = GeometryVector(similar(parent(G), T, dims))
+function Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T}
+    A = similar(parent(G), T, dims)
+    length(dims) == 1 ? GeometryVector(A) : A
+end
 
 # Mutable array interface
 # TODO Invalidate spatial index on mutations

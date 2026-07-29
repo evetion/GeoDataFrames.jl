@@ -10,7 +10,17 @@ using GeoArrow
 Read `fn` using the GeoArrowDriver driver. Any additional keyword arguments are passed to `Arrow.read`.
 """
 function GeoDataFrames.read(::GeoArrowDriver, fname::AbstractString; kwargs...)
-    GeoArrow.read(fname; kwargs...)
+    df = GeoArrow.read(fname; kwargs...)
+    GeoDataFrames.metadata!(
+        df,
+        "GEOINTERFACE:geometrycolumns",
+        GeoDataFrames.getgeometrycolumns(df);
+        style=:note,
+    )
+    for geom in GeoDataFrames.getgeometrycolumns(df)
+        df[!, geom] = collect(df[!, geom])
+    end
+    return df
 end
 
 """
@@ -18,8 +28,8 @@ end
 
 Write the provided `table` to `fn` using the GeoArrowDriver driver. Any additional keyword arguments are passed to `Arrow.write`.
 """
-function GeoDataFrames.write(::GeoArrowDriver, fname::AbstractString, data; kwargs...)
-    GeoArrow.write(fname, data; kwargs...)
+function GeoDataFrames.write(::GeoArrowDriver, fname::AbstractString, table; kwargs...)
+    GeoArrow.write(fname, table; kwargs...)
 end
 
 end
