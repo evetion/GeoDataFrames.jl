@@ -519,8 +519,8 @@ end
     @test_broken !isnothing(GI.crs(df))  # file has no crs
     @test "GEOINTERFACE:geometrycolumns" in keys(GDF.metadata(df))
 
-    @test_broken GDF.write("test_native.arrow", df) == "test_native.arrow"
-    @test_broken GDF.write(GDF.ArchGDALDriver(), "test.arrow", df) == "test.arrow"
+    @test GDF.write("test_native.arrow", df) == "test_native.arrow"
+    @test GDF.write(GDF.ArchGDALDriver(), "test.arrow", df) == "test.arrow"
     GDF.write(GDF.ArchGDALDriver(), "test.arrow", df2)
 end
 

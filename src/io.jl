@@ -392,19 +392,9 @@ const lookup_method = Dict{DataType, Function}(
     GI.MultiPolygonTrait => AG.unsafe_createmultipolygon,
 )
 
-const lookup_empty_method = Dict{DataType, Function}(
-    GI.PointTrait => AG.createpoint,
-    GI.MultiPointTrait => AG.createmultipoint,
-    GI.LineStringTrait => AG.createlinestring,
-    GI.LinearRingTrait => AG.createlinearring,
-    GI.MultiLineStringTrait => AG.createmultilinestring,
-    GI.PolygonTrait => AG.createpolygon,
-    GI.MultiPolygonTrait => AG.createmultipolygon,
-)
-
-function _convert(::Type{T}, geom) where {T <: AG.Geometry}
+function _convert(::Type{T}, geom) where {T<:AG.Geometry}
     trait = GI.geomtrait(geom)
-    f = get(GI.isempty(geom) ? lookup_empty_method : lookup_method, typeof(trait), nothing)
+    f = get(lookup_method, typeof(trait), nothing)
     isnothing(f) && error(
         "Cannot convert an object of $(typeof(geom)) with the $T trait (yet). Please report an issue.",
     )
