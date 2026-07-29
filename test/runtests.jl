@@ -71,6 +71,22 @@ end
     @test_throws ErrorException("Can't find local file /bla.shp.") GDF.read(fne)
 end
 
+@testitem "Read error includes GDAL diagnostic" setup = [Setup] begin
+    path = "/vsimem/missing.geojson"
+    exception = try
+        GDF.read(path)
+        nothing
+    catch caught
+        caught
+    end
+
+    @test exception isa AG.GDAL.GDALError
+    @test occursin(
+        "No such file or directory",
+        sprint(showerror, exception),
+    )
+end
+
 @testitem "Read shapefile with layer id" setup = [Setup] begin
     t = GDF.read(fn; layer = 0)
     @test nrow(t) == 42
@@ -711,6 +727,20 @@ end
     # Extension must be at a path boundary, not mid-word
     @test GDF._gdal_path("my.zipcode") == "my.zipcode"
     @test GDF._gdal_path("my.gzip") == "my.gzip"
+end
+
+@testitem "Read explicit GDAL virtual filesystem path" setup = [Setup] begin
+    import DataFrames
+    import GeoJSON
+
+    path = "/vsimem/explicit.geojson"
+    table = DataFrames.DataFrame(geometry=[AG.createpoint(1.0, 2.0)], value=[1])
+    GDF.write(GDF.ArchGDALDriver(), path, table; driver="GeoJSON")
+
+    df = GDF.read(path)
+    @test DataFrames.nrow(df) == 1
+    @test df.value == [1]
+    @test df.geometry[1] isa AG.IGeometry
 end
 
 @testitem "Read remote file via vsicurl" setup = [Setup] tags = [:network] begin
