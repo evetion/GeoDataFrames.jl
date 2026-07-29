@@ -67,9 +67,9 @@ julia> names(df2)
 function read(fn; kwargs...)
     gfn = _gdal_path(fn)
     ext = last(splitext(fn))
-    # Force ArchGDALDriver for paths rewritten to GDAL virtual filesystems,
-    # since native drivers can't handle /vsi* paths.
-    dr = gfn == fn ? driver(ext) : ArchGDALDriver()
+    # Native drivers cannot handle GDAL virtual filesystem paths, including
+    # paths explicitly supplied with a /vsi* prefix.
+    dr = gfn == fn && !startswith(gfn, "/vsi") ? driver(ext) : ArchGDALDriver()
     df = read(dr, gfn; kwargs...)
     for geom in getgeometrycolumns(df)
         df[!, geom] = GeometryVector(df[!, geom])
@@ -95,10 +95,16 @@ By default you only get the first layer, unless you specify either the index (0 
 Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
 The `options` keyword argument can be used to pass GDAL open options. Returns a `DataFrame`.
 """
-function read(driver::ArchGDALDriver, fn::AbstractString; layer = nothing, kwargs...)
+function read(
+    driver::ArchGDALDriver,
+    fn::AbstractString;
+    layer=nothing,
+    flags=AG.OF_READONLY | AG.OF_VERBOSE_ERROR,
+    kwargs...,
+)
     fn = _gdal_path(fn)
     _isvalidlocal(fn) || error("Can't find local file $fn.")
-    t = AG.read(fn; kwargs...) do ds
+    t = AG.read(fn; flags, kwargs...) do ds
         ds.ptr == C_NULL && error("Unable to open $fn.")
         if AG.nlayer(ds) > 1 && isnothing(layer)
             @warn "This file has multiple layers, defaulting to first layer."
