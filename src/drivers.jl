@@ -50,7 +50,7 @@ function driver(ext::AbstractString)
         return ShapefileDriver()
     elseif ext in (".parquet", ".pq")
         return GeoParquetDriver()
-    elseif ext == (".arrow", ".feather")
+    elseif ext in (".arrow", ".feather")
         return GeoArrowDriver()
     elseif ext == ".fgb"
         return FlatGeobufDriver()

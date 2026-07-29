@@ -78,6 +78,9 @@ end
 end
 
 @testitem "Drivers" setup = [Setup] begin
+    @test GDF.driver(".arrow") isa GDF.GeoArrowDriver
+    @test GDF.driver(".feather") isa GDF.GeoArrowDriver
+
     t = GDF.read(fn; layer = 0)
     GDF.write(joinpath(testdatadir, "test.csv"), t)
     GDF.write(joinpath(testdatadir, "test.arrow"), t)
@@ -100,6 +103,26 @@ end
     @test nrow(t) == 2
     @test "name" in names(t)
     @test t.name[1] == "test"
+    @test ismissing(t.name[2])
+end
+
+@testitem "Write GeoPackage with NULLs" setup = [Setup] begin
+    import DataFrames
+
+    fnn = joinpath(testdatadir, "null_geometry_regression.gpkg")
+    table = DataFrames.DataFrame(
+        geometry=[AG.createpoint(1.0, 2.0), missing],
+        name=["test", missing],
+    )
+
+    GDF.write(fnn, table)
+    t = GDF.read(fnn)
+    @test size(t, 1) == 2
+    @test !ismissing(t.geometry[1])
+    @test GI.getcoord(t.geometry[1], 1) == 1.0
+    @test GI.getcoord(t.geometry[1], 2) == 2.0
+    @test t.name[1] == "test"
+    @test ismissing(t.geometry[2])
     @test ismissing(t.name[2])
 end
 
@@ -240,6 +263,67 @@ end
             "DESCRIPTION" => "Written by GeoDataFrames.jl",
         ),
         geometrycolumn = :foo,
+    )
+
+    options = Dict("DESCRIPTION" => "Reusable options")
+    GDF.write(
+        joinpath(testdatadir, "test_options5.gpkg"),
+        table;
+        options,
+        geometrycolumn = :foo,
+    )
+    @test options == Dict("DESCRIPTION" => "Reusable options")
+end
+
+@testitem "Write schemaless Tables source" setup = [Setup] begin
+    import Tables
+
+    struct SchemalessPointTable{R}
+        rows::R
+    end
+
+    Base.iterate(table::SchemalessPointTable, state...) = iterate(table.rows, state...)
+    Base.IteratorSize(::Type{<:SchemalessPointTable}) = Base.SizeUnknown()
+    Tables.istable(::Type{<:SchemalessPointTable}) = true
+    Tables.rowaccess(::Type{<:SchemalessPointTable}) = true
+    Tables.rows(table::SchemalessPointTable) = table
+    Tables.schema(::SchemalessPointTable) = nothing
+
+    table = SchemalessPointTable([
+        (; geometry = AG.createpoint(1.0, 2.0), name = "test"),
+    ])
+    @test Tables.schema(Tables.rows(table)) === nothing
+
+    fn = joinpath(testdatadir, "test_schemaless.gpkg")
+    result = try
+        GDF.write(fn, table)
+    catch err
+        err
+    end
+    @test result == fn
+    if result == fn
+        written = GDF.read(fn)
+        @test nrow(written) == 1
+        @test written.name == ["test"]
+    end
+
+    struct UndiscoverableSchemaPointTable{R}
+        rows::R
+    end
+
+    Base.iterate(table::UndiscoverableSchemaPointTable, state...) =
+        iterate(table.rows, state...)
+    Base.IteratorSize(::Type{<:UndiscoverableSchemaPointTable}) = Base.SizeUnknown()
+    Tables.istable(::Type{<:UndiscoverableSchemaPointTable}) = true
+    Tables.rowaccess(::Type{<:UndiscoverableSchemaPointTable}) = true
+    Tables.rows(table::UndiscoverableSchemaPointTable) = table
+    Tables.columns(table::UndiscoverableSchemaPointTable) = table
+    Tables.schema(::UndiscoverableSchemaPointTable) = nothing
+
+    no_schema_table = UndiscoverableSchemaPointTable(table.rows)
+    @test_throws ArgumentError GDF.write(
+        joinpath(testdatadir, "test_undiscoverable_schema.gpkg"),
+        no_schema_table,
     )
 end
 
@@ -417,19 +501,27 @@ end
 @testitem "GeoArrow" setup = [Setup] begin
     using GeoArrow
     fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
+    native_df = GDF.read(GDF.GeoArrowDriver(), fn)
+    @test native_df.geometry isa Vector
+
     df = GDF.read(fn)
     AG.setconfigoption("OGR_ARROW_ALLOW_ALL_DIMS", "YES")
     df2 = GDF.read(GDF.ArchGDALDriver(), fn)
+    @test df.geometry isa GDF.GeometryVector
+    @test parent(df.geometry) isa Vector
+    @test eltype(df.geometry) != eltype(df2.geometry)
     @test sort(names(df)) == sort(names(df2))
     @test nrow(df) == nrow(df2)
     @test GI.trait(df.geometry[1]) == GI.trait(df2.geometry[1])
+
     @test GI.coordinates(df.geometry[1]) == GI.coordinates(df2.geometry[1])
 
-    # @test !isnothing(GI.crs(df))  # file has no crs
+    @test_broken !isnothing(GI.crs(df))  # file has no crs
     @test "GEOINTERFACE:geometrycolumns" in keys(GDF.metadata(df))
 
-    GDF.write("test_native.arrow", df)
-    GDF.write(GDF.ArchGDALDriver(), "test.arrow", df)
+    @test GDF.write("test_native.arrow", df) == "test_native.arrow"
+    @test GDF.write(GDF.ArchGDALDriver(), "test.arrow", df) == "test.arrow"
+    GDF.write(GDF.ArchGDALDriver(), "test.arrow", df2)
 end
 
 @testitem "Combination of drivers" setup = [Setup] begin
@@ -550,6 +642,14 @@ end
     filter!(row -> row.value > 5, df2)
     @test nrow(df2) == 5
     @test length(df2.geometry) == 5
+
+    mat = similar(gv, Int, (2, 3))
+    @test mat isa Matrix{Int}
+    @test size(mat) == (2, 3)
+
+    broadcasted = gv .== permutedims(gv)
+    @test broadcasted isa AbstractMatrix{Bool}
+    @test size(broadcasted) == (length(gv), length(gv))
 end
 
 @testitem "Metadata" setup = [Setup] begin

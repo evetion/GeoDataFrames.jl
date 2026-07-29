@@ -206,6 +206,16 @@ function write(
 )
     rows = Tables.rows(table)
     sch = Tables.schema(rows)
+    if isnothing(sch)
+        sch = Tables.schema(Tables.columns(table))
+    end
+    if isnothing(sch)
+        throw(
+            ArgumentError(
+                "Can't determine the schema of $(typeof(table)); provide a Tables.jl source with a discoverable row or column schema.",
+            ),
+        )
+    end
 
     # Determine geometry columns
     if !isnothing(geom_columns)  # backwards compatible
@@ -243,8 +253,9 @@ function write(
     end
 
     # Set geometry name in options
-    if !("geometry_name" in keys(options))
-        options["geometry_name"] = String(first(geometry_columns))
+    layer_options = copy(options)
+    if !("geometry_name" in keys(layer_options))
+        layer_options["geometry_name"] = String(first(geometry_columns))
     end
 
     # Find driver
@@ -294,7 +305,7 @@ function write(
                 dataset = can_create_layer ? ds : AG.create(AG.getdriver("Memory")),
                 geom = first(geom_types),  # how to set the name though?
                 spatialref = spatialref,
-                options = stringlist(options),
+                options = stringlist(layer_options),
             ) do layer
                 for (i, (geom_column, geom_type)) in
                     enumerate(zip(geometry_columns, geom_types))
@@ -321,14 +332,15 @@ function write(
 
                     for row in chunk
                         AG.addfeature(layer) do feature
-                            for (i, (geom_column)) in enumerate(geometry_columns)
+                            for (i, geom_column) in enumerate(geometry_columns)
+                                geometry = Tables.getcolumn(row, geom_column)
+                                if ismissing(geometry)
+                                    continue
+                                end
                                 AG.GDAL.ogr_f_setgeomfielddirectly(
                                     feature.ptr,
                                     i - 1,
-                                    _convert(
-                                        AG.Geometry,
-                                        Tables.getcolumn(row, geom_column),
-                                    ),
+                                    _convert(AG.Geometry, geometry),
                                 )
                             end
                             for (i, (name, _)) in zip(fieldindices, fields)
@@ -357,7 +369,7 @@ function write(
                         layer;
                         dataset = ds,
                         name = layer_name,
-                        options = stringlist(options),
+                        options = stringlist(layer_options),
                     )
                     if DataAPI.metadatasupport(typeof(table)).read
                         setmetadatalayer!(nlayer, table)
@@ -380,12 +392,13 @@ const lookup_method = Dict{DataType, Function}(
     GI.MultiPolygonTrait => AG.unsafe_createmultipolygon,
 )
 
-function _convert(::Type{T}, geom) where {T <: AG.Geometry}
-    f = get(lookup_method, typeof(GI.geomtrait(geom)), nothing)
+function _convert(::Type{T}, geom) where {T<:AG.Geometry}
+    trait = GI.geomtrait(geom)
+    f = get(lookup_method, typeof(trait), nothing)
     isnothing(f) && error(
         "Cannot convert an object of $(typeof(geom)) with the $T trait (yet). Please report an issue.",
     )
-    return f(GI.coordinates(geom))
+    return GI.isempty(geom) ? f() : f(GI.coordinates(geom))
 end
 
 function _convert(::Type{T}, geom::AG.IGeometry) where {T <: AG.Geometry}
