@@ -1,4 +1,5 @@
 using GeoDataFrames
+using CSV
 using Shapefile
 using GeoJSON
 using FlatGeobuf
@@ -60,6 +61,7 @@ makedocs(;
             "Usage" => "tutorials/usage.md",
             "Operations" => "tutorials/ops.md",
             "File formats" => "tutorials/formats.md",
+            "Native driver performance" => "tutorials/performance.md",
             "Examples" => "tutorials/examples.md",
         ],
         "Background" => Any[

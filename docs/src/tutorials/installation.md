@@ -37,6 +37,11 @@ using Pkg
 Pkg.add("GeoJSON")
 ```
 
+```julia [ CSV ]
+using Pkg
+Pkg.add("CSV")
+```
+
 ```julia [ GeoArrow ]
 using Pkg
 Pkg.add("GeoArrow")

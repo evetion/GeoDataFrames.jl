@@ -103,6 +103,133 @@ end
     GDF.write(joinpath(testdatadir, "test.pdf"), t)
 end
 
+@testitem "CSV driver" setup = [Setup] begin
+    csv_driver = GDF.driver(".csv")
+    @test csv_driver isa GDF.CSVDriver
+    @test GDF.package(csv_driver) === :CSV
+    @test GDF.uuid(csv_driver) == "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+end
+
+@testitem "Native driver fallback diagnostics" setup = [Setup] begin
+    @test_logs (:info, r"import CSV for a faster native driver") invoke(
+        GDF.read,
+        Tuple{GDF.AbstractDriver, AbstractString},
+        GDF.CSVDriver(),
+        joinpath(testdatadir, "test_wkt.csv"),
+    )
+end
+
+@testitem "Read CSV natively" setup = [Setup] begin
+    import CSV
+
+    mktempdir() do dir
+        spatial = joinpath(dir, "spatial.csv")
+        write(spatial, "WKT,name,value\n\"POINT (1 2)\",one,1\n,none,2\n")
+
+        df = GDF.read(spatial; types = Dict(:value => String))
+
+        @test df.value == ["1", "2"]
+        @test df.WKT isa GDF.GeometryVector
+        @test df.WKT[1] isa GFT.WellKnownText{GFT.Geom}
+        @test ismissing(df.WKT[2])
+        @test GI.geomtrait(df.WKT[1]) isa GI.PointTrait
+        @test GI.geometrycolumns(df) == (:WKT,)
+        @test isnothing(GI.crs(df))
+
+        metadata = DataAPI.metadata(df)
+        @test metadata["crs"] === nothing
+        @test metadata["GEOINTERFACE:crs"] === nothing
+        @test metadata["geometrycolumns"] == (:WKT,)
+        @test metadata["GEOINTERFACE:geometrycolumns"] == (:WKT,)
+
+        pooled = joinpath(dir, "pooled.csv")
+        write(
+            pooled,
+            "WKT,id\n",
+            join(("POINT (1 2),$id" for id in 1:100), "\n"),
+            "\n,101\n",
+        )
+
+        raw_pooled = CSV.read(pooled, GDF.DataFrame)
+        @test raw_pooled.WKT isa getfield(
+            parentmodule(typeof(raw_pooled.WKT)),
+            :PooledVector,
+        )
+
+        pooled_df = GDF.read(pooled)
+
+        @test pooled_df.WKT isa GDF.GeometryVector
+        @test parent(pooled_df.WKT) isa Vector
+        @test all(value -> value isa GFT.WellKnownText{GFT.Geom}, pooled_df.WKT[1:100])
+        @test all(value -> GI.geomtrait(value) isa GI.PointTrait, pooled_df.WKT[1:100])
+        @test ismissing(pooled_df.WKT[101])
+
+        attributes = joinpath(dir, "attributes.csv")
+        write(attributes, "longitude,latitude,name\n4.9,52.4,Amsterdam\n")
+
+        attributes_df = GDF.read(attributes)
+
+        @test GI.geometrycolumns(attributes_df) == ()
+        attributes_metadata = DataAPI.metadata(attributes_df)
+        @test attributes_metadata["geometrycolumns"] == ()
+        @test attributes_metadata["GEOINTERFACE:geometrycolumns"] == ()
+    end
+end
+
+@testitem "Write CSV natively" setup = [Setup] begin
+    import CSV
+
+    mktempdir() do dir
+        path = joinpath(dir, "points.csv")
+        table = GDF.DataFrame(
+            shape = [GI.Point(1, 2), missing],
+            name = ["first", "missing"],
+        )
+        GDF.metadata!(
+            table,
+            "GEOINTERFACE:geometrycolumns",
+            (:shape,);
+            style = :note,
+        )
+
+        result = GDF.write(path, table; delim = ';')
+
+        @test result == path
+        @test read(path, String) == "shape;name\nPOINT (1 2);first\n;missing\n"
+
+        raw = CSV.read(path, GDF.DataFrame; delim = ';')
+        @test isequal(raw.shape, Union{Missing, String}["POINT (1 2)", missing])
+        @test raw.name == ["first", "missing"]
+
+        roundtrip_path = joinpath(dir, "roundtrip.csv")
+        wkt_table = GDF.DataFrame(
+            WKT = [GI.Point(3, 4), missing],
+            id = [1, 2],
+        )
+        GDF.metadata!(
+            wkt_table,
+            "GEOINTERFACE:geometrycolumns",
+            (:WKT,);
+            style = :note,
+        )
+
+        GDF.write(roundtrip_path, wkt_table)
+        roundtrip = GDF.read(roundtrip_path)
+
+        @test GI.geometrycolumns(roundtrip) == (:WKT,)
+        @test roundtrip.WKT[1] isa GFT.WellKnownText{GFT.Geom}
+        @test GI.geomtrait(roundtrip.WKT[1]) isa GI.PointTrait
+        @test ismissing(roundtrip.WKT[2])
+
+        invalid = GDF.DataFrame(name = ["no geometry"])
+        @test_throws ArgumentError GDF.write(
+            joinpath(dir, "invalid.csv"),
+            invalid;
+            geometrycolumn = :shape,
+        )
+    end
+end
+
 @testitem "Read shapefile with layer name" setup = [Setup] begin
     t = GDF.read(fn; layer = "sites")
     @test nrow(t) == 42
@@ -541,6 +668,8 @@ end
 end
 
 @testitem "Combination of drivers" setup = [Setup] begin
+    using CSV
+
     broken_combos = [
         (GDF.GeoParquetDriver(), GDF.ShapefileDriver()),  # ArgumentError: Shapefiles can only contain geometries of the same type
         (GDF.GeoParquetDriver(), GDF.FlatGeobufDriver()),  # ICreateFeature: Mismatched geometry type. Feature geometry type is Polygon, expected layer geometry type is Multi Polygon
@@ -573,6 +702,7 @@ end
         (GDF.ShapefileDriver(), joinpath(testdatadir, "sites.shp"), (; force = true))
         (GDF.FlatGeobufDriver(), joinpath(testdatadir, "countries.fgb"), (;))  # No write support yet
         (GDF.GeoParquetDriver(), joinpath(testdatadir, "example.parquet"), (;))
+        (GDF.CSVDriver(), joinpath(testdatadir, "test_wkt.csv"), (;))
         (GDF.GeoArrowDriver(), joinpath(testdatadir, "example-multipolygon_z.arrow"), (;))  # Broken
     ]
     for ((driver_in, fn_in), (driver_out, fn_out, kwargs)) in

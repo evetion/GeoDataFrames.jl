@@ -82,8 +82,24 @@ end
 
 Read a file into a DataFrame using the specified `driver`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref). Returns a `DataFrame`.
 """
+const NATIVE_FASTER = Set([
+    (CSVDriver, :read),
+    (CSVDriver, :write),
+    (GeoJSONDriver, :read),
+    (GeoJSONDriver, :write),
+    (ShapefileDriver, :read),
+    (ShapefileDriver, :write),
+    (GeoParquetDriver, :read),
+    (GeoParquetDriver, :write),
+    (GeoArrowDriver, :read),
+])
+
 function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
-    @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
+    if (typeof(driver), :read) in NATIVE_FASTER
+        @info "Using GDAL for reading, import $(package(driver)) for a faster native driver."
+    else
+        @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
+    end
     read(ArchGDALDriver(), fn; kwargs...)
 end
 
@@ -187,7 +203,11 @@ end
 Write the provided `table` to `fn` using the specified driver. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref). Returns the path `fn` that was written.
 """
 function write(driver::AbstractDriver, fn::AbstractString, table; kwargs...)
-    @debug "Using GDAL for writing, import $(package(driver)) for a native driver."
+    if (typeof(driver), :write) in NATIVE_FASTER
+        @info "Using GDAL for writing, import $(package(driver)) for a faster native driver."
+    else
+        @debug "Using GDAL for writing, import $(package(driver)) for a native driver."
+    end
     write(ArchGDALDriver(), fn, table; kwargs...)
 end
 

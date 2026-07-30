@@ -48,7 +48,7 @@ GDF.read("test_points.shp", layer="test_points")
 
 Any keywords arguments are passed on to the underlying ArchGDAL [`read`](https://yeesian.com/ArchGDAL.jl/dev/reference/#ArchGDAL.read-Tuple%7BAbstractString%7D) function:
 ```julia
-GDF.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM_COLUMNS=NO"])
+GDF.read(GDF.ArchGDALDriver(), "test.csv"; options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM_COLUMNS=NO"])
 ```
 
 ## Writing

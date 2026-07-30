@@ -12,6 +12,7 @@ using Reexport: Reexport, @reexport
 import GeometryOps as GO
 using GeometryOps: GeometryOps
 import Proj  # For GO reproject
+import WellKnownGeometry
 
 include("vector.jl")
 include("exports.jl")
