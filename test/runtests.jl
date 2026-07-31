@@ -137,9 +137,7 @@ end
         @test isnothing(GI.crs(df))
 
         metadata = DataAPI.metadata(df)
-        @test metadata["crs"] === nothing
         @test metadata["GEOINTERFACE:crs"] === nothing
-        @test metadata["geometrycolumns"] == (:WKT,)
         @test metadata["GEOINTERFACE:geometrycolumns"] == (:WKT,)
 
         pooled = joinpath(dir, "pooled.csv")

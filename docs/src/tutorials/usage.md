@@ -47,7 +47,7 @@ Any keywords arguments are passed on to the underlying (possibly native) driver.
 GeoDataFrames.read("test.csv", options=["GEOM_POSSIBLE_NAMES=point,linestring", "KEEP_GEOM_COLUMNS=NO"])
 ```
 
-### Extensions
+### Native Extensions
 
 > [!WARNING]
 > As soon as you import a native driver extension package, it will override the default ArchGDAL driver for reading/writing files of the corresponding format. You can get the old behaviour back by explicitly using the `ArchGDALDriver` when reading/writing files like so: `read(GeoDataFrames.ArchGDALDriver(), fn; kwargs)`. 
