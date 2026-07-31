@@ -33,7 +33,7 @@ costs at a more representative scale.
 
 | Backend | Operation | Native median (ms) | ArchGDAL median (ms) | ArchGDAL/native |
 | --- | --- | ---: | ---: | ---: |
-| CSV | write | 2241.71 | 1105.67 | 0.49x |
+| CSV | write | 783.88 | 1078.82 | 1.38x |
 | GeoJSON | write | 882.10 | 10837.51 | 12.29x |
 | Shapefile | write | 768.96 | 1888.29 | 2.46x |
 | GeoParquet | write | 337.04 | 1187.14 | 3.52x |

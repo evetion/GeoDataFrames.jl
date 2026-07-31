@@ -251,21 +251,10 @@ function write(
         "Please set the `geometrycolumn` kwarg or define `GI.geometrycolumns` for $(typeof(table))",
     )
 
-    # Accept both Symbol and Tuple{Symbol}
-    geometry_columns = if geometrycolumn isa NTuple{N, <:Symbol} where {N}
-        geometrycolumn
-    elseif geometrycolumn isa Symbol
-        (geometrycolumn,)
-    else
-        throw(
-            ArgumentError(
-                "geometrycolumn must be a Symbol or a Tuple of Symbols, got a $(typeof(geometrycolumn))",
-            ),
-        )
-    end
+    geometrycolumns = geometry_columns(geometrycolumn)
 
     geom_types = []
-    for geom_column in geometry_columns
+    for geom_column in geometrycolumns
         geometry = getproperty(first(rows), geom_column)
         trait = GI.geomtrait(geometry)
         ndim = GI.ncoord(geometry)
@@ -281,7 +270,7 @@ function write(
     # Set geometry name in options
     layer_options = copy(options)
     if !("geometry_name" in keys(layer_options))
-        layer_options["geometry_name"] = String(first(geometry_columns))
+        layer_options["geometry_name"] = String(first(geometrycolumns))
     end
 
     # Find driver
@@ -294,7 +283,7 @@ function write(
     # Figure out attributes
     fields = Vector{Tuple{Symbol, DataType}}()
     for (name, type) in zip(sch.names, sch.types)
-        if !(name in geometry_columns)
+        if !(name in geometrycolumns)
             GI.isgeometry(type) &&
                 @warn "Writing $name as a non-spatial column, use the `geometrycolumn` argument to write as a geometry."
             nmtype = nonmissingtype(type)
@@ -334,7 +323,7 @@ function write(
                 options = stringlist(layer_options),
             ) do layer
                 for (i, (geom_column, geom_type)) in
-                    enumerate(zip(geometry_columns, geom_types))
+                    enumerate(zip(geometrycolumns, geom_types))
                     if i > 1
                         AG.writegeomdefn!(layer, string(geom_column), geom_type)
                     end
@@ -358,7 +347,7 @@ function write(
 
                     for row in chunk
                         AG.addfeature(layer) do feature
-                            for (i, geom_column) in enumerate(geometry_columns)
+                            for (i, geom_column) in enumerate(geometrycolumns)
                                 geometry = Tables.getcolumn(row, geom_column)
                                 if ismissing(geometry)
                                     continue

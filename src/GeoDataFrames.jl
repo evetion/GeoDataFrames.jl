@@ -17,7 +17,7 @@ import WellKnownGeometry
 include("vector.jl")
 include("exports.jl")
 include("drivers.jl")
-include("io.jl")
 include("utils.jl")
+include("io.jl")
 
 end  # module

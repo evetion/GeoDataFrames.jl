@@ -5,19 +5,6 @@ using WellKnownGeometry
 using WellKnownGeometry: getwkt
 using GeoDataFrames: CSVDriver, GeoDataFrames
 
-function geometry_columns(geometrycolumn)
-    if geometrycolumn isa Symbol
-        return (geometrycolumn,)
-    elseif geometrycolumn isa Tuple{Vararg{Symbol}}
-        return geometrycolumn
-    end
-    throw(
-        ArgumentError(
-            "geometrycolumn must be a Symbol or a Tuple of Symbols, got a $(typeof(geometrycolumn))",
-        ),
-    )
-end
-
 as_wkt(value) = ismissing(value) ? missing : getwkt(value).val
 
 function GeoDataFrames.read(::CSVDriver, fname::AbstractString; stringtype=String, kwargs...)
@@ -49,7 +36,7 @@ function GeoDataFrames.write(
     geometrycolumn=GeoDataFrames.getgeometrycolumns(table),
     kwargs...,
 )
-    geometrycolumns = geometry_columns(geometrycolumn)
+    geometrycolumns = GeoDataFrames.geometry_columns(geometrycolumn)
     df = GeoDataFrames.DataFrame(table; copycols=false)
 
     for column in geometrycolumns
