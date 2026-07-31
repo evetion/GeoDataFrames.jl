@@ -38,6 +38,16 @@ function setmetadatalayer!(layer, table)
     end
 end
 
+geometry_columns(geometrycolumn::Symbol) = (geometrycolumn,)
+geometry_columns(geometrycolumn::Tuple{Vararg{Symbol}}) = geometrycolumn
+function geometry_columns(geometrycolumn)
+    throw(
+        ArgumentError(
+            "geometrycolumn must be a Symbol or a Tuple of Symbols, got a $(typeof(geometrycolumn))",
+        ),
+    )
+end
+
 function getgeometrycolumns(table)
     if GI.isfeaturecollection(table)
         return GI.geometrycolumns(table)

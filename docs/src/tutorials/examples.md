@@ -19,18 +19,12 @@ df =
 GeoDataFrames.read("test.csv", options=["GEOM_POSSIBLE_NAMES=wkt", "KEEP_GEOM_COLUMNS=NO"])
 ```
 
-The same can be achieved natively using the CSV.jl package. We need to wrap the WKT geometries using GeoFormatTypes.jl, 
-so WellKnownGeometry can parse them automatically when needed later on.
+The same can be achieved natively using the CSV.jl package extension.
 
 ```julia
 using CSV
-using WellKnownGeometry  # to parse GeoFormatTypes WKT geometries later on
-using GeoFormatTypes
 
-df = CSV.read("test.csv", DataFrame)
-df.wkt =
-    GeoFormatTypes.WellKnownText.((GeoFormatTypes.Geom(),), df.wkt)
-GeoDataFrames.setgeometrycolumn!(df, :wkt)
+df = GeoDataFrames.read("test.csv")
 ```
 
 Note that in both cases, we don't know the CRS, so it will be `nothing` by default.

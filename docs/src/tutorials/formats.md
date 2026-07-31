@@ -42,6 +42,11 @@ using Pkg
 Pkg.add("GeoJSON")
 ```
 
+```julia [ CSV ]
+using Pkg
+Pkg.add("CSV")
+```
+
 ```julia [ GeoArrow ]
 using Pkg
 Pkg.add("GeoArrow")
@@ -63,6 +68,8 @@ Pkg.add("FlatGeobuf")  # no write support yet
 ```
 
 :::
+
+CSV.jl reads and writes geometry columns as WKT. A native read recognizes a column named exactly `WKT`.
 
 and as an example, to use the GeoArrow backend and download files, you will need to do:
 
