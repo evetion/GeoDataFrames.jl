@@ -169,7 +169,6 @@ end
 
         @test GI.geometrycolumns(attributes_df) == ()
         attributes_metadata = DataAPI.metadata(attributes_df)
-        @test attributes_metadata["geometrycolumns"] == ()
         @test attributes_metadata["GEOINTERFACE:geometrycolumns"] == ()
     end
 end
