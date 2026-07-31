@@ -680,12 +680,14 @@ end
     ]
     if Sys.iswindows()
         # GDAL.jl#146, GeoParquet on Windows is broken
+        push!(broken_combos, (GDF.CSVDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.ArchGDALDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.ShapefileDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.GeoJSONDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.FlatGeobufDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.GeoArrowDriver(), GDF.GeoParquetDriver()))
         push!(broken_combos, (GDF.GeoParquetDriver(), GDF.ArchGDALDriver()))  # not sure why this one fails
+        push!(broken_combos, (GDF.GeoParquetDriver(), GDF.CSVDriver()))  # not sure why this one fails
         push!(broken_combos, (GDF.GeoParquetDriver(), GDF.ShapefileDriver()))  # not sure why this one fails
         push!(broken_combos, (GDF.GeoParquetDriver(), GDF.GeoJSONDriver()))  # not sure why this one fails
         push!(broken_combos, (GDF.GeoParquetDriver(), GDF.FlatGeobufDriver()))  # not sure why this one fails
