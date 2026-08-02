@@ -173,6 +173,39 @@ end
     end
 end
 
+@testitem "Read geometry index creation" setup = [Setup] begin
+    import CSV
+
+    mktempdir() do dir
+        shp = joinpath(testdatadir, "sites.shp")
+        default_df = GDF.read(shp)
+        @test default_df.geometry isa GDF.GeometryVector
+        @test default_df.geometry.index[] !== nothing
+
+        noindex_df = GDF.read(shp; create_index = false)
+        @test noindex_df.geometry isa GDF.GeometryVector
+        @test noindex_df.geometry.index[] === nothing
+
+        csv = joinpath(dir, "geometry.csv")
+        write(csv, "WKT,name\n\"POINT (1 2)\",one\n,missing\n")
+
+        native_df = GDF.read(GDF.CSVDriver(), csv)
+        @test native_df.WKT isa GDF.GeometryVector
+        @test native_df.WKT.index[] !== nothing
+
+        native_noindex_df = GDF.read(GDF.CSVDriver(), csv; create_index = false)
+        @test native_noindex_df.WKT isa GDF.GeometryVector
+        @test native_noindex_df.WKT.index[] === nothing
+
+        missing_csv = joinpath(dir, "all_missing.csv")
+        write(missing_csv, "WKT,name\n,one\n,\n")
+
+        missing_df = GDF.read(missing_csv)
+        @test missing_df.WKT isa GDF.GeometryVector
+        @test missing_df.WKT.index[] === nothing
+    end
+end
+
 @testitem "Write CSV natively" setup = [Setup] begin
     import CSV
 
@@ -642,7 +675,8 @@ end
     using GeoArrow
     fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
     native_df = GDF.read(GDF.GeoArrowDriver(), fn)
-    @test native_df.geometry isa Vector
+    @test native_df.geometry isa GDF.GeometryVector
+    @test native_df.geometry.index[] !== nothing
 
     df = GDF.read(fn)
     AG.setconfigoption("OGR_ARROW_ALLOW_ALL_DIMS", "YES")
@@ -795,6 +829,33 @@ end
     broadcasted = gv .== permutedims(gv)
     @test broadcasted isa AbstractMatrix{Bool}
     @test size(broadcasted) == (length(gv), length(gv))
+end
+
+@testitem "GeometryVector spatial trees" setup = [Setup] begin
+    gv = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]))
+    @test gv.index[] === nothing
+
+    supplied = Ref{Any}(:cached)
+    wrapped = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]), supplied)
+    @test typeof(wrapped).parameters[2] === Any
+    @test wrapped.index === supplied
+
+    wrapped[1] = AG.createpoint(2.0, 2.0)
+    @test wrapped.index[] === nothing
+
+    wrapped.index[] = :cached
+    deleteat!(wrapped, 2)
+    @test wrapped.index[] === nothing
+
+    gv_missing = GDF.GeometryVector(Any[
+        GI.Point(0.0, 0.0),
+        missing,
+        GI.Point(2.0, 2.0),
+    ])
+    tree = GO.SpatialTreeInterface.spatialtree(gv_missing)
+    @test tree === GO.SpatialTreeInterface.spatialtree(gv_missing)
+    @test tree isa GO.FlexibleRTrees.RTree
+    @test GO.SpatialTreeInterface.query(tree, GI.Point(2.0, 2.0)) == [3]
 end
 
 @testitem "Metadata" setup = [Setup] begin

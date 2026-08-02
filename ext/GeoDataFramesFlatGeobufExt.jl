@@ -1,20 +1,26 @@
 module GeoDataFramesFlatGeobufExt
 
 using FlatGeobuf
-using GeoDataFrames: FlatGeobufDriver, ArchGDALDriver, GeoDataFrames
+using GeoDataFrames: FlatGeobufDriver, ArchGDALDriver, GeoDataFrames, GeometryVector
 
 """
     read(driver::FlatGeobufDriver, fn::AbstractString; kwargs...)
 
 Read `fn` using the FlatGeobufDriver driver.
 """
-function GeoDataFrames.read(::FlatGeobufDriver, fname::AbstractString; kwargs...)
+function GeoDataFrames.read(
+    ::FlatGeobufDriver,
+    fname::AbstractString;
+    create_index::Bool=true,
+    kwargs...,
+)
     isempty(kwargs) || @error "FlatGeobuf backend does not use keyword arguments."
     table = FlatGeobuf.read(fname; kwargs...)
-    df = GeoDataFrames.DataFrame(table; copycols = false)
+    df = GeoDataFrames.DataFrame(table; copycols=false)
     crs = GeoDataFrames.GI.crs(table)
-    !isnothing(crs) && GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", crs; style = :note)
-    GeoDataFrames.metadata!(df, "GEOINTERFACE:geometrycolumns", (:geometry,); style = :note)
+    !isnothing(crs) && GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", crs; style=:note)
+    GeoDataFrames.metadata!(df, "GEOINTERFACE:geometrycolumns", (:geometry,); style=:note)
+    df[!, :geometry] = GeometryVector(df[!, :geometry]; create_index)
     return df
 end
 

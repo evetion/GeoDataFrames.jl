@@ -3,14 +3,20 @@ module GeoDataFramesCSVExt
 using CSV
 using WellKnownGeometry
 using WellKnownGeometry: getwkt
-using GeoDataFrames: CSVDriver, GeoDataFrames
+using GeoDataFrames: CSVDriver, GeoDataFrames, GeometryVector
 
 as_wkt(value) = ismissing(value) ? missing : getwkt(value).val
 
-function GeoDataFrames.read(::CSVDriver, fname::AbstractString; stringtype=String, kwargs...)
+function GeoDataFrames.read(
+    ::CSVDriver,
+    fname::AbstractString;
+    create_index::Bool=true,
+    stringtype=String,
+    kwargs...,
+)
     df = CSV.read(fname, GeoDataFrames.DataFrame; stringtype, kwargs...)
     geometrycolumns = if :WKT in propertynames(df)
-        df[!, :WKT] = Vector(map(df[!, :WKT]) do value
+        df[!, :WKT] = GeometryVector(map(df[!, :WKT]; create_index) do value
             ismissing(value) ? missing :
             GeoDataFrames.GFT.WellKnownText(GeoDataFrames.GFT.Geom(), String(value))
         end)

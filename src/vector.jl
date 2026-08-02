@@ -1,32 +1,36 @@
 """
-    GeometryVector(A::Vector)
+    GeometryVector(A[, index])
 
-A thin wrapper around a `Vector` of geometries, used as the geometry column type in
-GeoDataFrames. It behaves like a regular `AbstractVector` (indexing, mutation, `similar`),
-and exists as a distinct type so geometry-specific behaviour (such as a future spatial index)
-can be attached. Geometry columns returned by [`read`](@ref) are wrapped in a `GeometryVector`.
+Wrapper for geometry columns in GeoDataFrames.
 
-# Example
-```jldoctest
-julia> gv = GeoDataFrames.GeometryVector([GeoInterface.Point(1.0, 2.0), GeoInterface.Point(3.0, 4.0)]);
-
-julia> length(gv)
-2
-```
+`GeometryVector` behaves like a mutable `AbstractVector` and stores one optional
+spatial tree in `index`. Supported mutations clear that stored tree.
 """
-struct GeometryVector{T} <: AbstractArray{T, 1}
+struct GeometryVector{T,I} <: AbstractArray{T,1}
     A::Vector{T}
-    # TODO Add spatial index
-    # TODO Add crs
+    index::Ref{I}
 end
+
+GeometryVector(A::Vector, index::I) where {I} = GeometryVector{eltype(A),I}(A, Ref{Union{Nothing,typeof(index)}}((index)))
+GeometryVector(A::Vector) = GeometryVector(A, Ref{Any}(nothing))
 
 Base.parent(G::GeometryVector) = G.A
 Base.size(G::GeometryVector) = size(parent(G))
 Base.length(G::GeometryVector) = length(parent(G))
 Base.IndexStyle(::Type{<:GeometryVector}) = IndexLinear()
-# TODO Invalidate spatial index
 Base.getindex(G::GeometryVector, i::Int) = getindex(parent(G), i)
-Base.setindex!(G::GeometryVector, v, i::Int) = setindex!(parent(G), v, i)
+
+function Base.setindex!(G::GeometryVector, v, i::Int)
+    setindex!(parent(G), v, i)
+    G.index[] = nothing
+    return G
+end
+
+function Base.deleteat!(G::GeometryVector, i)
+    deleteat!(parent(G), i)
+    G.index[] = nothing
+    return G
+end
 
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
 function Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T}
@@ -34,6 +38,11 @@ function Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T}
     length(dims) == 1 ? GeometryVector(A) : A
 end
 
-# Mutable array interface
-# TODO Invalidate spatial index on mutations
-Base.deleteat!(G::GeometryVector, i) = (deleteat!(parent(G), i); G)
+function spatialtree(G::GeometryVector)
+    tree = G.index[]
+    tree !== nothing && return tree
+
+    tree = spatialtree(parent(G))
+    G.index[] = tree
+    return tree
+end
