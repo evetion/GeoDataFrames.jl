@@ -11,7 +11,6 @@ for geometry predicates and operations.
 ```@example tutorial-ops
 using GeoDataFrames
 using GeoDataFrames: setcrs!
-using GeometryOps
 using NaturalEarth
 
 countries = select(
