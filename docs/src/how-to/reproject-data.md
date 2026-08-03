@@ -9,9 +9,7 @@ need coordinates in another CRS.
 coordinates and CRS.
 
 ```@example reproject-data
-using DataFrames
 using GeoDataFrames
-using GeoInterface
 using GeoDataFrames: reproject!
 using CairoMakie
 using NaturalEarth

@@ -7,10 +7,8 @@ plot.
 
 ```@example plot-geometries
 using CairoMakie
-using DataFrames
 using GeoDataFrames
 using GeoDataFrames: setcrs!
-using GeoInterface
 using NaturalEarth
 
 countries = select(

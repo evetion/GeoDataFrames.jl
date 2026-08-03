@@ -22,9 +22,7 @@ Pass `update = true` to open an existing dataset for updates. The layer name
 must be new unless the driver receives its `OVERWRITE=YES` layer option.
 
 ```@example read-write-layers
-using DataFrames
 using GeoDataFrames
-using GeoInterface
 
 sites = DataFrame(
     name = ["library"],

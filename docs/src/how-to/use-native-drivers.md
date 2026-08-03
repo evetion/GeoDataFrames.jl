@@ -14,9 +14,7 @@ Pkg.add("GeoArrow")
 ```
 
 ```@example native-geoarrow
-using DataFrames
 using GeoDataFrames
-using GeoInterface
 using GeoArrow
 
 table = DataFrame(

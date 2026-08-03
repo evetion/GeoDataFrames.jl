@@ -9,10 +9,8 @@ Load country and river geometries, retain a focused set of South American
 countries, and broadcast a GeometryOps predicate over the geometry column:
 
 ```@example geometry-operations
-using DataFrames
 using GeoDataFrames
 using GeoDataFrames: setcrs!
-using GeometryOps
 using CairoMakie
 using NaturalEarth
 

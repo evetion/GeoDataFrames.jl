@@ -9,9 +9,7 @@ names or coordinate metadata differ from GeoDataFrames' defaults.
 `setcrs!` records the coordinate reference system.
 
 ```@example manage-metadata
-using DataFrames
 using GeoDataFrames
-using GeoInterface
 using GeoDataFrames: setcrs!, setgeometrycolumn!
 
 locations = DataFrame(

@@ -17,12 +17,8 @@ For a point-in-polygon join, put points on the left and use
 [`GeometryOps.within`](@extref) against polygons on the right:
 
 ```@example spatial-joins
-using DataFrames
 using GeoDataFrames
-using GeoInterface
 using FlexiJoins
-using GeometryOps
-using CairoMakie
 using NaturalEarth
 
 map_units = select(
@@ -63,6 +59,8 @@ Berlin and Paris do not match a Benelux country.
 Visualize which points joined to at least one polygon and which did not:
 
 ```@example spatial-joins
+using CairoMakie
+
 matched_cities = unique(joined.city)
 matched = subset(points, :city => ByRow(city -> city in matched_cities))
 unmatched = subset(points, :city => ByRow(city -> !(city in matched_cities)))
