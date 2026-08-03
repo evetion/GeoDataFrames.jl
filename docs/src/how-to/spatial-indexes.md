@@ -1,21 +1,28 @@
-# Use spatial indexes
+# Work with spatial indexes
 
-GeoDataFrames does not export a manual spatial-index construction or query
-API. Do not call internal caches or rely on a `build_spatialindex`,
-`spatialindex`, or `query_spatialindex` workflow.
+Use this guide when you need faster repeated spatial filtering or joins.
 
-Reading data creates geometry-column indexes by default. Pass
-`create_index = false` when reading if that eager work is unnecessary:
+## Current GeoDataFrames behavior
 
-```julia
-table = GeoDataFrames.read("observations.gpkg"; create_index = false)
-```
+`GeoDataFrames.read` may store geometry columns in `GeometryVector`, but
+GeoDataFrames does not currently expose a public API to build and query a
+spatial index directly on that vector.
 
-Use [geometry operations](geometry-operations.md) for spatial selection and
-[spatial joins](spatial-joins.md) for matching table rows. Those public
-interfaces choose their own candidate filtering and exact predicates.
+For join workflows, [FlexiJoins](https://github.com/JuliaAPlavin/FlexiJoins.jl)
+performs candidate filtering with an STR tree on the right-side table before
+running the exact geometry predicate.
 
-The cached index held by a read-time `GeometryVector` is an implementation
-detail. Supported mutations invalidate it; it is not an index to query
-directly. See the [data model](../background/data-model.md) for that storage
-detail.
+## Speed up repeated spatial queries
+
+For repeated predicate evaluation over larger datasets, use an index-oriented
+package and keep geometries in a table with one consistent CRS:
+
+1. Reproject both datasets to a suitable projected CRS when distance or area
+   assumptions matter.
+2. Build or reuse the package's index structure once.
+3. Use the index to narrow candidates, then apply exact predicates
+   (`intersects`, `within`, `contains`) to candidates.
+
+See [perform a spatial join](spatial-joins.md) for table-level join patterns
+and [operations and joins background](../background/operations-and-joins.md)
+for design rationale.

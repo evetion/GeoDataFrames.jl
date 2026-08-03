@@ -5,31 +5,31 @@ layout: home
 
 hero:
   name: "GeoDataFrames.jl"
-  text: "Manipulating spatial data"
-  tagline: "simplifies the handling of spatial vector data in Julia."
+  text: "Spatial vector data with DataFrames"
   image:
     src: logo.svg
     alt: GeoDataFrames
   actions:
     - theme: brand
       text: Get Started
-      link: /tutorials/installation.md
+      link: /tutorials/usage.md
     - theme: alt
       text: View on Github
       link: https://github.com/evetion/GeoDataFrames.jl
     - theme: alt
       text: API Reference
-      link: /reference/api
+      link: /reference/api.md
 
 features:
   - title: ⚙️ Reading and writing
-    details: Defines common methods for reading, writing and manipulating geospatial vector data, as one-liners, and as fast as possible.
-    link: /tutorials/usage
+    details: Read and write common vector formats using one API with explicit control when needed.
+    link: /how-to/read-write-data.md
   - title: 🗂️🌐 Data Formats
-    details: Works out of the box with Shapefiles, GeoPackages, GeoJSON, and more recent formats as GeoParquet and GeoArrow. It uses native Julia drivers where possible.
-    link: /tutorials/formats
+    details: Works with GeoPackage, Shapefile, GeoJSON, GeoParquet, GeoArrow, FlatGeobuf, CSV, and more.
+    link: /reference/native-drivers.md
   - title: 🧩⚡ Seamless integration
-    details: GeoDataFrames.jl is fully compatible with the Tables.jl and GeoInterface.jl ecosystems. This enables plotting, operations and analysis using the full power of the Julia ecosystem.
+    details: Uses ordinary DataFrames with GeoInterface geometries, so it composes naturally with Julia packages.
+    link: /background/data-model.md
 
 
 ---
@@ -39,83 +39,73 @@ features:
 CurrentModule = GeoDataFrames
 ```
 
-Simple geographical vector interaction built on top of [ArchGDAL](https://github.com/yeesian/ArchGDAL.jl/). Inspiration taken from [geopandas](https://geopandas.org). See [Rasters.jl](https://rafaqz.github.io/Rasters.jl/) for raster data interaction, and [GeometryOps.jl](https://juliageo.org/GeometryOps.jl) for further geometry operations.
+GeoDataFrames.jl provides geospatial I/O, metadata handling, and geometry workflows on top of ordinary `DataFrame`s.
+Use [Rasters.jl](https://rafaqz.github.io/Rasters.jl/) for raster data and
+[GeometryOps.jl](https://juliageo.org/GeometryOps.jl) for the operation set.
 
+## Quick start
 
-## How to Install GeoDataFrames.jl?
-
-As `GeoDataFrames.jl` is registered in the Julia General registry, you can simply run the following
-command in the Julia REPL:
-
-```julia
-julia> using Pkg
-julia> Pkg.add("GeoDataFrames.jl")
-# or
-julia> ] # ']' should be pressed
-pkg> add GeoDataFrames
-```
-
-If you want to use the latest unreleased version, you can run the following command:
+Install and load:
 
 ```julia
-pkg> add GeoDataFrames#main
-```
-
-
-## Enabling package extensions
-
-GeoDataFrames depends on GDAL to load and save data by default. However, for several file formats, there now exist native Julia packages that can be used as backends. Before using such a specific file format, you must install and load its corresponding package.
-
-::: code-group
-
-```julia [ GeoJSON ]
 using Pkg
-Pkg.add("GeoJSON")
+Pkg.add(["GeoDataFrames", "NaturalEarth", "CairoMakie"])
+
+using GeoDataFrames
 ```
 
-```julia [ GeoArrow ]
-using Pkg
-Pkg.add("GeoArrow")
+Load real country and city geometries, classify cities by intersection with a
+country, and write the result:
+
+```@example home-quickstart
+using GeoDataFrames  # hide
+using NaturalEarth
+
+map_units = select(
+    DataFrame(naturalearth("admin_0_map_units", 10)),
+    :NAME,
+    :geometry,
+)
+cities = select(
+    DataFrame(naturalearth("populated_places", 50)),
+    :NAME,
+    :geometry,
+)
+
+netherlands = subset(map_units, :NAME => ByRow(==("Netherlands")))
+nearby_cities = subset(
+    cities,
+    :NAME => ByRow(name -> name in ["Amsterdam", "Brussels", "Paris"]),
+)
+country = only(netherlands.geometry)
+result = transform(
+    nearby_cities,
+    :geometry => ByRow(geometry -> intersects(geometry, country)) => :intersects_netherlands,
+)
+selected = subset(result, :intersects_netherlands)
+
+written_rows = mktempdir() do directory
+    path = joinpath(directory, "quickstart.gpkg")
+    GeoDataFrames.write(path, result)
+    nrow(GeoDataFrames.read(path))
+end
+
+(cities = result.NAME, intersects = result.intersects_netherlands, rows_written = written_rows)
 ```
 
-```julia [ GeoParquet ]
-using Pkg
-Pkg.add("GeoParquet")
+```@example home-quickstart
+using CairoMakie
+
+fig = plot(
+    netherlands.geometry;
+    color = :dodgerblue,
+    strokecolor = :dodgerblue,
+    strokewidth = 2,
+    axis = (; title = "Cities intersecting the Netherlands"),
+)
+plot!(result.geometry; color = :lightgray, markersize = 14)
+plot!(selected.geometry; color = :tomato, markersize = 14)
+fig
 ```
 
-```julia [ Shapefile ]
-using Pkg
-Pkg.add("Shapefile")
-```
-
-```julia [ FlatGeobuf ]
-using Pkg
-Pkg.add("FlatGeobuf")
-```
-
-:::
-
-and as an example, to use the GeoArrow backend and download files, you will need to do:
-
-```julia
-using GeoDataFrames, GeoArrow
-```  
-  
-
-## 🐞📌  Bugs
-
-::: info Bugs, errors and making issues for GeoDataFrames.jl
-
-Because there are so many vector file types and variations of them, most of the time we need the `exact file` that caused your problem to know how to fix it, and be sure that we have actually fixed it when we are done. So fixing a GeoDataFrames.jl bug nearly always involves downloading some file and running some code that breaks with it (if you can trigger the bug without a file, that's great! but it's not always possible).
-
-To make an issue we can fix quickly (or at all) there are three key steps:
-1. Include the file in an accessible place on web `without authentication` or any other work on our part, so we can just get it and find your bug. You can put it on a file hosting platform (e.g. google drive, drop box, whatever you use) and share the url.
-  
-2. Add a [`minimum working example`](https://discourse.julialang.org/t/please-read-make-it-easier-to-help-you/14757) to the issue template that first downloads the file, then runs the function that triggers the bug.
-  
-3. Paste the `complete stack trace` of the error it produces, right to the bottom, into the issue template. Then we can be sure we reproduced the same problem.
-  
-
-Good issues are really appreciated, but they do take just a little extra effort with GeoDataFrames.jl because of this need for files.
-
-:::
+Continue with [Installation](tutorials/installation.md), [Quick start tutorial](tutorials/usage.md), and [How-to guides](how-to/read-write-data.md).

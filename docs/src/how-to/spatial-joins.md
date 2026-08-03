@@ -1,6 +1,6 @@
 # Perform a spatial join
 
-Use a GeometryOps predicate in a FlexiJoins join to match rows by their
+Use a GeometryOps predicate in a [FlexiJoins](https://github.com/JuliaAPlavin/FlexiJoins.jl) join to match rows by their
 geometries.
 
 FlexiJoins is a separate package. If you installed only GeoDataFrames, install
@@ -13,8 +13,8 @@ using FlexiJoins
 
 ## Join points to polygons
 
-For a point-in-polygon join, put points on the left and use `within` against
-polygons on the right:
+For a point-in-polygon join, put points on the left and use
+[`GeometryOps.within`](@extref) against polygons on the right:
 
 ```@example spatial-joins
 using DataFrames
@@ -22,29 +22,62 @@ using GeoDataFrames
 using GeoInterface
 using FlexiJoins
 using GeometryOps
+using CairoMakie
+using NaturalEarth
 
-square(x0, y0, x1, y1) = GeoInterface.Polygon([[
-    (x0, y0),
-    (x1, y0),
-    (x1, y1),
-    (x0, y1),
-    (x0, y0),
-]])
-
-points = DataFrame(
-    site = ["A", "B", "C"],
-    geometry = GeoInterface.Point.([(0.75, 0.75), (2.5, 2.5), (5.0, 5.0)]),
+map_units = select(
+    DataFrame(naturalearth("admin_0_map_units", 10)),
+    :ADMIN => :country,
+    :NAME => :map_unit,
+    :geometry,
 )
-zones = DataFrame(
-    zone = ["north", "south"],
-    geometry = [square(0.0, 0.0, 2.0, 2.0), square(0.5, 0.5, 3.0, 3.0)],
+cities = select(
+    DataFrame(naturalearth("populated_places", 50)),
+    :NAME => :city,
+    :geometry,
 )
 
-innerjoin((points, zones), by_pred(:geometry, GeometryOps.within, :geometry))
+zones = subset(
+    map_units,
+    :country => ByRow(
+        name -> name in ["Belgium", "Luxembourg", "Netherlands"],
+    ),
+    :map_unit => ByRow(!=("Caribbean Netherlands")),
+)
+points = subset(
+    cities,
+    :city => ByRow(
+        name -> name in ["Amsterdam", "Berlin", "Brussels", "Luxembourg", "Paris"],
+    ),
+)
+
+joined = innerjoin((points, zones), by_pred(:geometry, GeometryOps.within, :geometry))
+joined
 ```
 
-The inner join returns a row for every matching pair. Site `A` appears twice
-because it lies in both polygons.
+The inner join matches Amsterdam, Brussels, and Luxembourg to their countries.
+Berlin and Paris do not match a Benelux country.
+
+## Plot joined and unmatched points
+
+Visualize which points joined to at least one polygon and which did not:
+
+```@example spatial-joins
+matched_cities = unique(joined.city)
+matched = subset(points, :city => ByRow(city -> city in matched_cities))
+unmatched = subset(points, :city => ByRow(city -> !(city in matched_cities)))
+
+fig = plot(
+    zones.geometry;
+    color = (:dodgerblue, 0.12),
+    strokecolor = :dodgerblue,
+    strokewidth = 2,
+    axis = (; title = "Cities joined to Benelux countries"),
+)
+plot!(unmatched.geometry; color = :gray, markersize = 14)
+plot!(matched.geometry; color = :tomato, markersize = 14)
+fig
+```
 
 ## Keep unmatched rows
 

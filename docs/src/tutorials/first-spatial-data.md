@@ -1,18 +1,8 @@
-# Your first spatial dataset
+# From scratch
 
-This lesson creates two Amsterdam locations, records their coordinate reference
-system (CRS), saves and reloads them, projects them for mapping, performs a
-spatial test, and draws the result.
-
-## Install the packages
-
-Start Julia's package manager and install the packages used directly in this
-lesson:
-
-```julia
-using Pkg
-Pkg.add(["CairoMakie", "DataFrames", "GeoDataFrames", "GeoInterface"])
-```
+Here we create a GeoDataFrame from scratch with several nearby European
+locations, set their coordinate reference system (CRS), save and reload them,
+and project them for mapping and plotting.
 
 ## Create locations and declare their CRS
 
@@ -20,26 +10,28 @@ The coordinates below use longitude, latitude order in WGS 84. `setcrs!`
 records that fact as table metadata; it does not change any coordinates.
 
 ```@example first-spatial-data
-using CairoMakie
-using DataFrames
 using GeoDataFrames
-using GeoInterface
 using GeoDataFrames: setcrs!
 
 places = DataFrame(
-    name = ["library", "station"],
-    geometry = GeoInterface.Point.([(4.8952, 52.3702), (4.9000, 52.3790)]),
+    name = ["Amsterdam", "Rotterdam", "Brussels", "Cologne"],
+    geometry = GeoInterface.Point.([
+        (4.8952, 52.3702),
+        (4.4777, 51.9244),
+        (4.3517, 50.8503),
+        (6.9603, 50.9375),
+    ]),
 )
 setcrs!(places, EPSG(4326))
 ```
 
-Julia displays a two-row table. Its `:geometry` column contains points, and
+Julia displays a four-row table. Its `:geometry` column contains points, and
 its CRS is now EPSG:4326. For other geometry columns or CRS metadata, see
 [manage geometry metadata](../how-to/manage-metadata.md).
 
 ## Save and load the table
 
-Write a GeoPackage in a temporary directory, then read it back. The `do` block
+We can write the DataFrame to a GeoPackage in a temporary directory, then read it back. The `do` block
 removes the directory after the read completes.
 
 ```@example first-spatial-data
@@ -73,29 +65,52 @@ larger datasets.
 
 ## Apply a geometry operation
 
-GeometryOps predicates work on the GeoInterface geometries in the column. This
-one finds the point that intersects the library point.
+GeometryOps predicates work on the GeoInterface geometries in the column.
+Load the Netherlands boundary, project it to the same CRS as the places, and
+retain only locations that intersect it.
 
 ```@example first-spatial-data
-selected = projected_places[
-    GeometryOps.intersects.(projected_places.geometry, Ref(projected_places.geometry[1])),
-    :,
-]
+using NaturalEarth
+
+map_units = select(
+    DataFrame(naturalearth("admin_0_map_units", 10)),
+    :NAME,
+    :geometry,
+)
+
+netherlands = subset(map_units, :NAME => ByRow(==("Netherlands")))
+projected_netherlands = reproject(netherlands, EPSG(3857))
+
+country = only(projected_netherlands.geometry)
+selected = subset(
+    projected_places,
+    :geometry => ByRow(geometry -> intersects(geometry, country)),
+)
 
 selected.name
 ```
 
-The selected name is `"library"`. See [apply geometry
+The selected names are `"Amsterdam"` and `"Rotterdam"`. See [apply geometry
 operations](../how-to/geometry-operations.md) for predicates and
 transformations on areas and other geometry types.
 
 ## Plot the points
 
-Makie recognizes GeoInterface geometries. The final expression creates a
-CairoMakie figure containing the two projected points.
+Makie recognizes GeoInterface geometries. The final expression shows all four
+projected points and highlights the two locations in the Netherlands.
 
 ```@example first-spatial-data
-plot(projected_places.geometry)
+using CairoMakie  # or GLMakie
+
+fig = plot(
+    projected_netherlands.geometry;
+    color = (:dodgerblue, 0.15),
+    strokecolor = :dodgerblue,
+    axis = (; title = "Locations in the Netherlands"),
+)
+plot!(projected_places.geometry; color = :lightgray, markersize = 14)
+plot!(selected.geometry; color = :tomato, markersize = 14)
+fig
 ```
 
 For axes, colours, labels, and other presentation choices, start with [plot
