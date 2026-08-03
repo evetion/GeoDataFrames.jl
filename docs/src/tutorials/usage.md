@@ -17,10 +17,10 @@ df = DataFrame(geometry=points, name="test");
 > Unlike geopandas, there's no special GeoDataFrame type here. 
 
 ## Read and inspect
-Read a vector file into a DataFrame:
+Read a vector file into a DataFrame by providing a filename or url:
 
 ```@example julia
-df = GeoDataFrames.read("../../../test/data/test_points.shp")
+df = GeoDataFrames.read("https://github.com/yeesian/ArchGDALDatasets/raw/refs/heads/master/ospy/data1/sites.shp")
 (rows=nrow(df), geometrycolumns=GeoInterface.geometrycolumns(df), crs=GeoInterface.crs(df))
 ```
 
