@@ -11,8 +11,10 @@ struct GeometryVector{T,I} <: AbstractArray{T,1}
     index::Ref{I}
 end
 
-GeometryVector(A::Vector, index::I) where {I} = GeometryVector{eltype(A),I}(A, Ref{Union{Nothing,typeof(index)}}((index)))
-GeometryVector(A::Vector) = GeometryVector(A, Ref{Any}(nothing))
+GeometryVector(A::AbstractVector; create_index::Bool=true) =
+    GeometryVector(A, create_index ? spatialtree(A) : nothing)
+GeometryVector(A::AbstractVector, index::I) where {I} =
+    GeometryVector{eltype(A),Union{Nothing,I}}(A, Ref{Union{Nothing,I}}(index))
 
 Base.parent(G::GeometryVector) = G.A
 Base.size(G::GeometryVector) = size(parent(G))
@@ -20,22 +22,37 @@ Base.length(G::GeometryVector) = length(parent(G))
 Base.IndexStyle(::Type{<:GeometryVector}) = IndexLinear()
 Base.getindex(G::GeometryVector, i::Int) = getindex(parent(G), i)
 
-function Base.setindex!(G::GeometryVector, v, i::Int)
-    setindex!(parent(G), v, i)
+function _invalidate!(G::GeometryVector)
     G.index[] = nothing
     return G
 end
 
+function Base.setindex!(G::GeometryVector, v, i::Int)
+    setindex!(parent(G), v, i)
+    return _invalidate!(G)
+end
+
+function Base.push!(G::GeometryVector, item)
+    push!(parent(G), item)
+    return _invalidate!(G)
+end
+
 function Base.deleteat!(G::GeometryVector, i)
     deleteat!(parent(G), i)
-    G.index[] = nothing
-    return G
+    return _invalidate!(G)
+end
+
+function Base.copyto!(dest::GeometryVector, src::GeometryVector)
+    dest === src && return dest
+    _invalidate!(dest)
+    copyto!(parent(dest), parent(src))
+    return dest
 end
 
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
 function Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T}
     A = similar(parent(G), T, dims)
-    length(dims) == 1 ? GeometryVector(A) : A
+    length(dims) == 1 ? GeometryVector(A, nothing) : A
 end
 
 function spatialtree(G::GeometryVector)

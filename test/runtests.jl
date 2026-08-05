@@ -804,11 +804,29 @@ end
 @testitem "GeometryVector mutability" setup = [Setup] begin
     using DataFrames
 
-    # Test deleteat! directly on GeometryVector
-    gv = GDF.GeometryVector(AG.createpoint.(coords))
-    @test length(gv) == 10
-    deleteat!(gv, 5)
-    @test length(gv) == 9
+    gv = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]))
+
+    push!(gv, AG.createpoint(2.0, 2.0))
+    @test length(gv) == 3
+    @test gv.index[] === nothing
+
+    tree = GO.SpatialTreeInterface.spatialtree(gv)
+    deleteat!(gv, 2)
+    @test length(gv) == 2
+    @test tree !== nothing
+    @test gv.index[] === nothing
+
+    tree = GO.SpatialTreeInterface.spatialtree(gv)
+    gv .= Ref(AG.createpoint(3.0, 3.0))
+    @test tree !== nothing
+    @test gv.index[] === nothing
+
+    tree = GO.SpatialTreeInterface.spatialtree(gv)
+    gv .= gv
+    @test gv.index[] === tree
+
+    broadcast!(identity, gv, gv)
+    @test gv.index[] === tree
 
     # Test with DataFrame filtering (the original issue scenario)
     df = DataFrame(geometry=GDF.GeometryVector(AG.createpoint.(coords)), name="test")
@@ -833,7 +851,20 @@ end
 
 @testitem "GeometryVector spatial trees" setup = [Setup] begin
     gv = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]))
-    @test gv.index[] === nothing
+    @test gv.index[] !== nothing
+    @test typeof(gv).parameters[2] == Union{Nothing,typeof(gv.index[])}
+
+    lazy = GDF.GeometryVector(
+        AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]);
+        create_index = false,
+    )
+    @test lazy.index[] === nothing
+    @test typeof(lazy).parameters[2] === Nothing
+
+    allocated = similar(gv, eltype(gv), size(gv))
+    @test allocated isa GDF.GeometryVector
+    @test allocated.index[] === nothing
+    @test typeof(allocated).parameters[2] === Nothing
 
     supplied = Ref{Any}(:cached)
     wrapped = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]), supplied)

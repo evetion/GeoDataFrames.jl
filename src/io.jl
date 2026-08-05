@@ -124,12 +124,12 @@ function read(
         if AG.nlayer(ds) > 1 && isnothing(layer)
             @warn "This file has multiple layers, defaulting to first layer."
         end
-        return read(driver, ds, isnothing(layer) ? 0 : layer)
+        return read(driver, ds, isnothing(layer) ? 0 : layer, create_index)
     end
     return t
 end
 
-function read(::ArchGDALDriver, ds, layer)
+function read(::ArchGDALDriver, ds, layer, create_index::Bool)
     df, gnames, sr, metadata = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(

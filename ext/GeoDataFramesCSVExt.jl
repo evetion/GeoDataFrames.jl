@@ -16,10 +16,11 @@ function GeoDataFrames.read(
 )
     df = CSV.read(fname, GeoDataFrames.DataFrame; stringtype, kwargs...)
     geometrycolumns = if :WKT in propertynames(df)
-        df[!, :WKT] = GeometryVector(map(df[!, :WKT]; create_index) do value
+        geometry = map(df[!, :WKT]) do value
             ismissing(value) ? missing :
             GeoDataFrames.GFT.WellKnownText(GeoDataFrames.GFT.Geom(), String(value))
-        end)
+        end
+        df[!, :WKT] = GeometryVector(collect(geometry); create_index)
         (:WKT,)
     else
         ()
