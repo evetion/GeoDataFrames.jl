@@ -7,6 +7,7 @@
 # Resolve the conflict explicitly in favor of GeometryOps' geometry operations.
 using GeometryOps: flatten, union
 export flatten, union
+export GeoDataFrame
 
 using GeoFormatTypes:
     AbstractWellKnownText,
