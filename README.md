@@ -54,8 +54,6 @@ GDF.read(GDF.ArchGDALDriver(), "test.csv"; options=["GEOM_POSSIBLE_NAMES=point,l
 ## Writing
 Here we create a vector of points (i.e. tuples of x,y coordinates), place them into a DataFrame, and write to a shapefile
 ```julia
-using DataFrames
-
 coords = tuple.(rand(10), rand(10))  
 df = DataFrame(geometry=coords, name="test");
 GDF.write("test_points.shp", df)
