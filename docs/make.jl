@@ -81,7 +81,7 @@ makedocs(;
     sitename="GeoDataFrames.jl",
     format=MarkdownVitepress(;
         repo="https://github.com/evetion/GeoDataFrames.jl",
-        devbranch="master",
+        devbranch="main",
         devurl="dev",
         # deploy_url = "https://www.evetion.nl/GeoDataFrames.jl",
     ),
@@ -134,7 +134,7 @@ makedocs(;
 DocumenterVitepress.deploydocs(;
     repo="github.com/evetion/GeoDataFrames.jl",
     target=joinpath(@__DIR__, "build"),
-    devbranch="master",
+    devbranch="main",
     branch="gh-pages",
     push_preview=true,
 )
