@@ -30,6 +30,7 @@ You can find the corresponding package to load in the [Package extensions](@ref)
 ```@docs
 setgeometrycolumn!
 setcrs!
+GeoDataFrame
 reproject
 reproject!
 ```
