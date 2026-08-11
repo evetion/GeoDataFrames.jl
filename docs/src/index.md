@@ -49,63 +49,32 @@ Install and load:
 
 ```julia
 using Pkg
-Pkg.add(["GeoDataFrames", "NaturalEarth", "CairoMakie"])
+Pkg.add(["GeoDataFrames"])
 
 using GeoDataFrames
 ```
 
-Load real country and city geometries, classify cities by intersection with a
-country, and write the result:
+We can `read` a dataset by passing a filename, or an url.
+The source is a pinned copy of GDAL's one-point GeoJSON test dataset.
 
-```@example home-quickstart
-using GeoDataFrames  # hide
-using NaturalEarth
+```@example reading-writing
+using GeoDataFrames
 
-map_units = select(
-    DataFrame(naturalearth("admin_0_map_units", 10)),
-    :NAME,
-    :geometry,
-)
-cities = select(
-    DataFrame(naturalearth("populated_places", 50)),
-    :NAME,
-    :geometry,
-)
-
-netherlands = subset(map_units, :NAME => ByRow(==("Netherlands")))
-nearby_cities = subset(
-    cities,
-    :NAME => ByRow(name -> name in ["Amsterdam", "Brussels", "Paris"]),
-)
-country = only(netherlands.geometry)
-result = transform(
-    nearby_cities,
-    :geometry => ByRow(geometry -> intersects(geometry, country)) => :intersects_netherlands,
-)
-selected = subset(result, :intersects_netherlands)
-
-written_rows = mktempdir() do directory
-    path = joinpath(directory, "quickstart.gpkg")
-    GeoDataFrames.write(path, result)
-    nrow(GeoDataFrames.read(path))
-end
-
-(cities = result.NAME, intersects = result.intersects_netherlands, rows_written = written_rows)
+source = "https://raw.githubusercontent.com/OSGeo/gdal/decb67c35ec249c1bae55f53238d5a69e7eff153/autotest/ogr/data/geojson/point.geojson"
+table = GeoDataFrames.read(source)
+table
 ```
 
-```@example home-quickstart
-using CairoMakie
+`read` returns an ordinary `DataFrame` with a geometry column, and specific metadata on the geometrycolumns and crs.
 
-fig = plot(
-    netherlands.geometry;
-    color = :dodgerblue,
-    strokecolor = :dodgerblue,
-    strokewidth = 2,
-    axis = (; title = "Cities intersecting the Netherlands"),
-)
-plot!(result.geometry; color = :lightgray, markersize = 14)
-plot!(selected.geometry; color = :tomato, markersize = 14)
-fig
+
+## Write the dataset
+
+`write` the table to a GeoPackage:
+
+```@example reading-writing
+fn = GeoDataFrames.write("test.gpkg", table)
+isfile(fn)
 ```
 
 Continue with [Installation](tutorials/installation.md), [Quick start tutorial](tutorials/usage.md), and [How-to guides](how-to/read-write-data.md).

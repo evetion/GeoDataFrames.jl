@@ -11,7 +11,6 @@ example reads the same data every time:
 
 ```@example reading-writing
 using GeoDataFrames
-using GeoInterface
 
 source =
     "https://raw.githubusercontent.com/OSGeo/gdal/decb67c35ec249c1bae55f53238d5a69e7eff153/autotest/ogr/data/geojson/point.geojson"
