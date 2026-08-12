@@ -1,6 +1,6 @@
 module GeoDataFramesGeoArrowExt
 
-using GeoDataFrames: GeoArrowDriver, GeoDataFrames
+using GeoDataFrames: GeoArrowDriver, GeoDataFrames, GeometryVector
 import GeoInterface as GI
 using GeoArrow
 
@@ -9,7 +9,12 @@ using GeoArrow
 
 Read `fn` using the GeoArrowDriver driver. Any additional keyword arguments are passed to `Arrow.read`.
 """
-function GeoDataFrames.read(::GeoArrowDriver, fname::AbstractString; kwargs...)
+function GeoDataFrames.read(
+    ::GeoArrowDriver,
+    fname::AbstractString;
+    create_index::Bool=true,
+    kwargs...,
+)
     df = GeoArrow.read(fname; kwargs...)
     GeoDataFrames.metadata!(
         df,
@@ -18,7 +23,7 @@ function GeoDataFrames.read(::GeoArrowDriver, fname::AbstractString; kwargs...)
         style=:note,
     )
     for geom in GeoDataFrames.getgeometrycolumns(df)
-        df[!, geom] = collect(df[!, geom])
+        df[!, geom] = GeometryVector(collect(df[!, geom]); create_index)
     end
     return df
 end

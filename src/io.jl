@@ -21,7 +21,7 @@ function find_driver(fn::AbstractString)
     AG.extensiondriver(fn)
 end
 
-const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
+const lookup_type = Dict{Tuple{DataType,Int},AG.OGRwkbGeometryType}(
     (GI.PointTrait, 2) => AG.wkbPoint,
     (GI.PointTrait, 3) => AG.wkbPoint25D,
     (GI.PointTrait, 4) => AG.wkbPointZM,
@@ -44,9 +44,11 @@ const lookup_type = Dict{Tuple{DataType, Int}, AG.OGRwkbGeometryType}(
 )
 
 """
-    read(fn::AbstractString; kwargs...)
+    read(fn::AbstractString; create_index=true, kwargs...)
 
 Read a file into a `DataFrame`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
+Geometry columns are wrapped in `GeometryVector` and indexed eagerly by default; pass
+`create_index=false` to skip building the spatial tree.
 
 Returns a `DataFrame` whose geometry column(s) hold GeoInterface.jl compatible geometries, with
 the coordinate reference system and geometry column names stored as table metadata.
@@ -65,17 +67,13 @@ julia> names(df2)
  "name"
 ```
 """
-function read(fn; kwargs...)
+function read(fn; create_index::Bool=true, kwargs...)
     gfn = _gdal_path(fn)
     ext = last(splitext(fn))
     # Native drivers cannot handle GDAL virtual filesystem paths, including
     # paths explicitly supplied with a /vsi* prefix.
     dr = gfn == fn && !startswith(gfn, "/vsi") ? driver(ext) : ArchGDALDriver()
-    df = read(dr, gfn; kwargs...)
-    for geom in getgeometrycolumns(df)
-        df[!, geom] = GeometryVector(df[!, geom])
-    end
-    df
+    read(dr, gfn; create_index, kwargs...)
 end
 
 """
@@ -95,13 +93,13 @@ const NATIVE_FASTER = Set([
     (GeoArrowDriver, :read),
 ])
 
-function read(driver::AbstractDriver, fn::AbstractString; kwargs...)
+function read(driver::AbstractDriver, fn::AbstractString; create_index::Bool=true, kwargs...)
     if (typeof(driver), :read) in NATIVE_FASTER
         @info "Using GDAL for reading, import $(package(driver)) for a faster native driver."
     else
         @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
     end
-    read(ArchGDALDriver(), fn; kwargs...)
+    read(ArchGDALDriver(), fn; create_index, kwargs...)
 end
 
 """
@@ -117,6 +115,7 @@ function read(
     fn::AbstractString;
     layer=nothing,
     flags=AG.OF_READONLY | AG.OF_VERBOSE_ERROR,
+    create_index::Bool=true,
     kwargs...,
 )
     fn = _gdal_path(fn)
@@ -126,12 +125,12 @@ function read(
         if AG.nlayer(ds) > 1 && isnothing(layer)
             @warn "This file has multiple layers, defaulting to first layer."
         end
-        return read(driver, ds, isnothing(layer) ? 0 : layer)
+        return read(driver, ds, isnothing(layer) ? 0 : layer, create_index)
     end
     return t
 end
 
-function read(::ArchGDALDriver, ds, layer)
+function read(::ArchGDALDriver, ds, layer, create_index::Bool)
     df, gnames, sr, metadata = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(
@@ -141,7 +140,7 @@ function read(::ArchGDALDriver, ds, layer)
             )
         end
         domains = AG.GDAL.gdalgetmetadatadomainlist(table.ptr)
-        metadata = Dict{String, Any}()
+        metadata = Dict{String,Any}()
         for domain in domains
             if domain == ""
                 merge!(metadata, dictstring(AG.GDAL.gdalgetmetadata(table.ptr, domain)))
@@ -164,15 +163,19 @@ function read(::ArchGDALDriver, ds, layer)
     crs = sr.ptr == C_NULL ? nothing : GFT.WellKnownText(GFT.CRS(), AG.toWKT(sr))
     geometrycolumns = Tuple(gnames)
 
-    for (k, v) in pairs(metadata)
-        DataAPI.metadata!(df, k, v, style = :note)
+    for column in geometrycolumns
+        df[!, column] = GeometryVector(df[!, column]; create_index)
     end
-    metadata!(df, "crs", crs; style = :note)
-    metadata!(df, "geometrycolumns", geometrycolumns; style = :note)
+
+    for (k, v) in pairs(metadata)
+        DataAPI.metadata!(df, k, v, style=:note)
+    end
+    metadata!(df, "crs", crs; style=:note)
+    metadata!(df, "geometrycolumns", geometrycolumns; style=:note)
 
     # Also add the GEOINTERFACE:property as a namespaced thing
-    metadata!(df, "GEOINTERFACE:crs", crs; style = :note)
-    metadata!(df, "GEOINTERFACE:geometrycolumns", geometrycolumns; style = :note)
+    metadata!(df, "GEOINTERFACE:crs", crs; style=:note)
+    metadata!(df, "GEOINTERFACE:geometrycolumns", geometrycolumns; style=:note)
     return df
 end
 
@@ -221,14 +224,14 @@ function write(
     ::ArchGDALDriver,
     fn::AbstractString,
     table;
-    layer_name::AbstractString = "data",
-    crs::Union{GFT.GeoFormat, Nothing} = getcrs(table),
-    driver::Union{Nothing, AbstractString} = nothing,
-    options::Dict{String, String} = Dict{String, String}(),
-    geom_columns = nothing,
-    geometrycolumn = getgeometrycolumns(table),
-    chunksize = 20_000,
-    update = false,
+    layer_name::AbstractString="data",
+    crs::Union{GFT.GeoFormat,Nothing}=getcrs(table),
+    driver::Union{Nothing,AbstractString}=nothing,
+    options::Dict{String,String}=Dict{String,String}(),
+    geom_columns=nothing,
+    geometrycolumn=getgeometrycolumns(table),
+    chunksize=20_000,
+    update=false,
     kwargs...,
 )
     rows = Tables.rows(table)
@@ -282,7 +285,7 @@ function write(
     end
 
     # Figure out attributes
-    fields = Vector{Tuple{Symbol, DataType}}()
+    fields = Vector{Tuple{Symbol,DataType}}()
     for (name, type) in zip(sch.names, sch.types)
         if !(name in geometrycolumns)
             GI.isgeometry(type) &&
@@ -297,7 +300,7 @@ function write(
     if update
         _isvalidlocal(fn) || error("Can't update non-existent file.")
         f = AG.read
-        ckwargs = (; flags = AG.OF_UPDATE)
+        ckwargs = (; flags=AG.OF_UPDATE)
     else
         f = AG.create
         ckwargs = (; driver)
@@ -317,11 +320,11 @@ function write(
             can_use_transaction = AG.testcapability(ds, "Transactions")
 
             AG.createlayer(;
-                name = layer_name,
-                dataset = can_create_layer ? ds : AG.create(AG.getdriver("Memory")),
-                geom = first(geom_types),  # how to set the name though?
-                spatialref = spatialref,
-                options = stringlist(layer_options),
+                name=layer_name,
+                dataset=can_create_layer ? ds : AG.create(AG.getdriver("Memory")),
+                geom=first(geom_types),  # how to set the name though?
+                spatialref=spatialref,
+                options=stringlist(layer_options),
             ) do layer
                 for (i, (geom_column, geom_type)) in
                     enumerate(zip(geometrycolumns, geom_types))
@@ -383,9 +386,9 @@ function write(
                     @warn "Can't create layers in this format, copying from memory instead."
                     nlayer = AG.copy(
                         layer;
-                        dataset = ds,
-                        name = layer_name,
-                        options = stringlist(layer_options),
+                        dataset=ds,
+                        name=layer_name,
+                        options=stringlist(layer_options),
                     )
                     if DataAPI.metadatasupport(typeof(table)).read
                         setmetadatalayer!(nlayer, table)
@@ -398,7 +401,7 @@ function write(
 end
 
 # This should be upstreamed to ArchGDAL
-const lookup_method = Dict{DataType, Function}(
+const lookup_method = Dict{DataType,Function}(
     GI.PointTrait => AG.unsafe_createpoint,
     GI.MultiPointTrait => AG.unsafe_createmultipoint,
     GI.LineStringTrait => AG.unsafe_createlinestring,
@@ -418,6 +421,6 @@ function _convert(::Type{T}, geom) where {T<:AG.Geometry}
     return GI.isempty(geom) ? f() : f(GI.coordinates(geom))
 end
 
-function _convert(::Type{T}, geom::AG.IGeometry) where {T <: AG.Geometry}
+function _convert(::Type{T}, geom::AG.IGeometry) where {T<:AG.Geometry}
     return AG.unsafe_clone(geom)
 end
