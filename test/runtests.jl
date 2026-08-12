@@ -563,7 +563,7 @@ end
 
     df = GDF.GeoDataFrame(array)
 
-    @test propertynames(df) == [:geometry, :layer1]
+    @test propertynames(df) == [:geometry, :value]
     @test df.geometry == [
         (10.0, 1.0),
         (20.0, 1.0),
@@ -617,7 +617,7 @@ end
         dims = (:X, :Y),
     )
     symbol_dims_df = GDF.GeoDataFrame(symbol_dims_raster)
-    @test propertynames(symbol_dims_df) == [:geometry, :layer1]
+    @test propertynames(symbol_dims_df) == [:geometry, :value]
     @test symbol_dims_df.geometry == [
         (1, 1),
         (2, 1),
