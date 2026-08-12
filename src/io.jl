@@ -37,6 +37,7 @@ const lookup_type = Dict{Tuple{DataType,Int},AG.OGRwkbGeometryType}(
     (GI.PolygonTrait, 2) => AG.wkbPolygon,
     (GI.PolygonTrait, 3) => AG.wkbPolygon25D,
     (GI.PolygonTrait, 4) => AG.wkbPolygonZM,
+    (GI.RectangleTrait, 2) => AG.wkbPolygon,
     (GI.MultiPolygonTrait, 2) => AG.wkbMultiPolygon,
     (GI.MultiPolygonTrait, 3) => AG.wkbMultiPolygon25D,
     (GI.MultiPolygonTrait, 4) => AG.wkbMultiPolygonZM,
@@ -407,6 +408,7 @@ const lookup_method = Dict{DataType,Function}(
     GI.LinearRingTrait => AG.unsafe_createlinearring,
     GI.MultiLineStringTrait => AG.unsafe_createmultilinestring,
     GI.PolygonTrait => AG.unsafe_createpolygon,
+    GI.RectangleTrait => AG.unsafe_createpolygon,
     GI.MultiPolygonTrait => AG.unsafe_createmultipolygon,
 )
 

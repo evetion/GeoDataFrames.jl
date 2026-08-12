@@ -549,6 +549,155 @@ end
     @test GDF.dictstring(["noseparator"]) == Dict{String, String}()
 end
 
+@testitem "DimensionalData conversion" begin
+    import DimensionalData as DD
+    import GeoDataFrames as GDF
+    import GeoInterface as GI
+
+    data = reshape(collect(1:6), 2, 3)
+    array = DD.DimArray(
+        data,
+        (DD.X(10.0:10.0:20.0), DD.Y(1.0:1.0:3.0));
+        name = :value,
+    )
+
+    df = GDF.GeoDataFrame(array)
+
+    @test propertynames(df) == [:geometry, :value]
+    @test df.geometry == [
+        (10.0, 1.0),
+        (20.0, 1.0),
+        (10.0, 2.0),
+        (20.0, 2.0),
+        (10.0, 3.0),
+        (20.0, 3.0),
+    ]
+    @test GI.geomtrait(first(df.geometry)) isa GI.PointTrait
+    @test GI.geometrycolumns(df) == (:geometry,)
+    @test isnothing(GI.crs(df))
+    @test GI.geometry(first(GI.getfeature(df))) == (10.0, 1.0)
+
+    df.value[1] = 7
+    @test array[1, 1] == 7
+
+    stack = DD.DimStack((value = array, doubled = 2 .* array))
+    stack_df = GDF.GeoDataFrame(stack)
+    @test propertynames(stack_df) == [:geometry, :value, :doubled]
+    @test stack_df.doubled == 2 .* stack_df.value
+
+    custom = GDF.GeoDataFrame(array; geometrycolumn = :location)
+    @test propertynames(custom) == [:location, :value]
+    @test GI.geometrycolumns(custom) == (:location,)
+
+    intervals = DD.Lookups.Intervals(DD.Lookups.Start())
+    cube = DD.DimArray(
+        reshape(collect(1:24), 2, 3, 4),
+        (
+            DD.Ti(1:2),
+            DD.Y(10.0:10.0:30.0; sampling = intervals),
+            DD.X(100.0:10.0:130.0; sampling = intervals),
+        );
+        name = :value,
+    )
+    cube_df = GDF.GeoDataFrame(cube)
+    @test propertynames(cube_df) == [:Ti, :geometry, :value]
+    @test cube_df.geometry[1] == GDF.Extent(X = (100.0, 110.0), Y = (10.0, 20.0))
+    @test cube_df.geometry[2] == cube_df.geometry[1]
+    @test cube_df.geometry[3] == GDF.Extent(X = (100.0, 110.0), Y = (20.0, 30.0))
+    @test cube_df.geometry[7] == GDF.Extent(X = (110.0, 120.0), Y = (10.0, 20.0))
+end
+
+@testitem "Raster conversion" begin
+    import GeoDataFrames as GDF
+    import GeoInterface as GI
+    import Rasters
+
+    symbol_dims_raster = Rasters.Raster(
+        reshape(collect(1:6), 2, 3);
+        dims = (:X, :Y),
+    )
+    symbol_dims_df = GDF.GeoDataFrame(symbol_dims_raster)
+    @test propertynames(symbol_dims_df) == [:geometry, :layer1]
+    @test symbol_dims_df.geometry == [
+        (1, 1),
+        (2, 1),
+        (1, 2),
+        (2, 2),
+        (1, 3),
+        (2, 3),
+    ]
+
+    point_raster = Rasters.Raster(
+        reshape(collect(1:12), 2, 2, 3),
+        (
+            Rasters.X(10.0:10.0:20.0),
+            Rasters.Y(1.0:1.0:2.0),
+            Rasters.Band([:red, :green, :blue]),
+        );
+        name = :value,
+        crs = GDF.EPSG(4326),
+    )
+    point_df = GDF.GeoDataFrame(point_raster)
+
+    @test propertynames(point_df) ==
+          [:geometry, :Band_red, :Band_green, :Band_blue]
+    @test size(point_df) == (4, 4)
+    @test point_df.Band_red == [1, 2, 3, 4]
+    @test point_df.Band_green == [5, 6, 7, 8]
+    @test point_df.Band_blue == [9, 10, 11, 12]
+    @test all(geom -> GI.geomtrait(geom) isa GI.PointTrait, point_df.geometry)
+    @test GI.crs(point_df) == GDF.EPSG(4326)
+
+    point_df.Band_red[1] = 13
+    @test point_raster[1, 1, 1] == 13
+
+    intervals = Rasters.Lookups.Intervals(Rasters.Lookups.Start())
+    area_raster = Rasters.Raster(
+        reshape(collect(1:4), 2, 2),
+        (
+            Rasters.X(0.0:10.0:10.0; sampling = intervals),
+            Rasters.Y(100.0:10.0:110.0; sampling = intervals),
+        );
+        name = :value,
+    )
+    area_df = GDF.GeoDataFrame(area_raster)
+    @test all(geom -> GI.geomtrait(geom) isa GI.RectangleTrait, area_df.geometry)
+    @test GI.coordinates(first(area_df.geometry)) == [
+        [
+            [0.0, 100.0],
+            [10.0, 100.0],
+            [10.0, 110.0],
+            [0.0, 110.0],
+            [0.0, 100.0],
+        ],
+    ]
+
+    area_points = GDF.GeoDataFrame(area_raster; geometry = :point)
+    @test first(area_points.geometry) == (0.0, 100.0)
+    @test GI.geomtrait(first(area_points.geometry)) isa GI.PointTrait
+
+    mktempdir() do dir
+        point_path = joinpath(dir, "point.tif")
+        area_path = joinpath(dir, "area.tif")
+        Base.write(point_path, point_raster)
+        Base.write(area_path, area_raster)
+        stored_cells =
+            GDF.read(GDF.write(joinpath(dir, "cells.gpkg"), area_df))
+
+        point_from_tiff = Rasters.Raster(point_path)
+        area_from_tiff = Rasters.Raster(area_path)
+        @test GI.geomtrait(first(stored_cells.geometry)) isa GI.PolygonTrait
+        @test Rasters.sampling(point_from_tiff, Rasters.X) isa
+              Rasters.Lookups.Points
+        @test Rasters.sampling(area_from_tiff, Rasters.X) isa
+              Rasters.Lookups.Intervals
+        @test GI.geomtrait(first(GDF.GeoDataFrame(point_from_tiff).geometry)) isa
+              GI.PointTrait
+        @test GI.geomtrait(first(GDF.GeoDataFrame(area_from_tiff).geometry)) isa
+              GI.RectangleTrait
+    end
+end
+
 @testitem "Invalid geometrycolumn type" setup = [Setup] begin
     table = DataFrame(; foo = AG.createpoint.([[0, 0, 0]]), name = "test")
     @test_throws "geometrycolumn must be a Symbol or a Tuple of Symbols" GDF.write(

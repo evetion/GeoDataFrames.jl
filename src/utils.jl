@@ -80,6 +80,20 @@ function getcrs(table)
     nothing
 end
 
+"""
+    GeoDataFrame(source; geometrycolumn=:geometry, geometry=:auto)
+
+Convert a supported geospatial source to a `DataFrame` with a GeoInterface-compatible
+geometry column and coordinate reference system metadata.
+
+Loading DimensionalData.jl adds methods for dimensional arrays and stacks. `Band`
+dimensions become separate value columns. With `geometry=:auto`, point-sampled
+dimensions produce point geometry and interval-sampled dimensions produce cell
+extents. Use `geometry=:point` to represent interval-sampled dimensions by their
+lookup points instead.
+"""
+function GeoDataFrame end
+
 function geomcrs(table)
     rows = Tables.rows(table)
     geom_column = first(getgeometrycolumns(table))
