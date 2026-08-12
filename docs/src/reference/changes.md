@@ -10,9 +10,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
-- Automatic creation of a spatial index on reading.
 - Extent metadata support.
 - Improved show methods for GeoDataFrames and GeometryVectors.
+
+## v0.4.4
+
+### Added
+- Added a native CSV driver extension, allowing reading and writing of WKT/WKB geometry columns in CSV files via CSV.jl.
+- Automatic creation of a spatial index on reading, speeding up subsequent spatial operations.
+- Added a DimensionalData extension to convert a `Raster`/`RasterStack` to a `GeoDataFrame`, turning bands into columns while preserving geometry and CRS.
+- Expanded and restructured the documentation, following the [Diataxis](https://diataxis.fr/) framework.
+
+## v0.4.3
+
+### Added
+- Auto-add GDAL virtual filesystem prefixes (`/vsicurl/`, `/vsis3/`, `/vsizip/`, etc.) for URLs, cloud storage (S3, GCS, Azure, OSS, Swift) and archives (zip, gz, tar, ...), so these paths can be read directly.
+- Keyword argument checking is now improved and more consistent across driver extensions.
+
+### Changed
+- Read errors are now thrown by default, replacing the unhelpful generic "Unable to open file." message with the underlying GDAL error.
+- Networked paths are now always read through GDAL's virtual filesystem handling.
+- Driver options are no longer mutated when passed to `read`/`write`.
+
+### Fixed
+- Error instead of silently misbehaving on schemaless tables.
+- Fixed writing of empty geometries.
+- Fixed native Arrow format detection.
+- Fixed field access on a `DataFrameRow`.
+- Fixed `GeometryVector` becoming 2D when used with `similar`.
 
 ## v0.4.2
 
