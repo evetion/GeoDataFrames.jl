@@ -62,7 +62,7 @@ julia> path = GeoDataFrames.write(joinpath(tempdir(), "example.gpkg"), df);
 julia> df2 = GeoDataFrames.read(path);
 
 julia> names(df2)
-2-element Vector{String}:
+3-element Vector{String}:
  "fid"
  "geometry"
  "name"
