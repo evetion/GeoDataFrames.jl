@@ -563,7 +563,7 @@ end
 
     df = GDF.GeoDataFrame(array)
 
-    @test propertynames(df) == [:geometry, :value]
+    @test propertynames(df) == [:geometry, :layer1]
     @test df.geometry == [
         (10.0, 1.0),
         (20.0, 1.0),
