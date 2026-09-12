@@ -13,7 +13,7 @@ Read `fn` using the GeoJSONDriver driver.
 function GeoDataFrames.read(
     ::GeoJSONDriver,
     fname::AbstractString;
-    create_index::Bool=true,
+    create_index::Bool=false,
     kwargs...,
 )
     kwargnames = keys(kwargs)

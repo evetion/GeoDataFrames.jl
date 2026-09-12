@@ -180,7 +180,11 @@ end
         shp = joinpath(testdatadir, "sites.shp")
         default_df = GDF.read(shp)
         @test default_df.geometry isa GDF.GeometryVector
-        @test default_df.geometry.index[] !== nothing
+        @test default_df.geometry.index[] === nothing
+
+        index_df = GDF.read(shp; create_index = true)
+        @test index_df.geometry isa GDF.GeometryVector
+        @test index_df.geometry.index[] !== nothing
 
         noindex_df = GDF.read(shp; create_index = false)
         @test noindex_df.geometry isa GDF.GeometryVector
@@ -191,7 +195,11 @@ end
 
         native_df = GDF.read(GDF.CSVDriver(), csv)
         @test native_df.WKT isa GDF.GeometryVector
-        @test native_df.WKT.index[] !== nothing
+        @test native_df.WKT.index[] === nothing
+
+        native_index_df = GDF.read(GDF.CSVDriver(), csv; create_index = true)
+        @test native_index_df.WKT isa GDF.GeometryVector
+        @test native_index_df.WKT.index[] !== nothing
 
         native_noindex_df = GDF.read(GDF.CSVDriver(), csv; create_index = false)
         @test native_noindex_df.WKT isa GDF.GeometryVector
@@ -823,7 +831,7 @@ end
 @testitem "GeoArrow" setup = [Setup] begin
     using GeoArrow
     fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
-    native_df = GDF.read(GDF.GeoArrowDriver(), fn)
+    native_df = GDF.read(GDF.GeoArrowDriver(), fn; create_index = true)
     @test native_df.geometry isa GDF.GeometryVector
     @test native_df.geometry.index[] !== nothing
 
@@ -999,21 +1007,30 @@ end
 end
 
 @testitem "GeometryVector spatial trees" setup = [Setup] begin
-    gv = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]))
-    @test gv.index[] !== nothing
-    @test typeof(gv).parameters[2] == Union{Nothing,typeof(gv.index[])}
+    eager = GDF.GeometryVector(
+        AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]);
+        create_index = true,
+    )
+    @test eager.index[] !== nothing
+    @test typeof(eager).parameters[2] == Union{Nothing,typeof(eager.index[])}
 
-    lazy = GDF.GeometryVector(
+    # Every construction path types its cache slot for the tree that a later
+    # query builds, whether or not one is cached yet.
+    lazy = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]))
+    @test lazy.index[] === nothing
+    @test typeof(lazy).parameters[2] === typeof(eager).parameters[2]
+
+    explicit = GDF.GeometryVector(
         AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]);
         create_index = false,
     )
-    @test lazy.index[] === nothing
-    @test typeof(lazy).parameters[2] === Nothing
+    @test explicit.index[] === nothing
+    @test typeof(explicit).parameters[2] === typeof(eager).parameters[2]
 
-    allocated = similar(gv, eltype(gv), size(gv))
+    allocated = similar(eager, eltype(eager), size(eager))
     @test allocated isa GDF.GeometryVector
     @test allocated.index[] === nothing
-    @test typeof(allocated).parameters[2] === Nothing
+    @test typeof(allocated).parameters[2] === typeof(eager).parameters[2]
 
     supplied = Ref{Any}(:cached)
     wrapped = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]), supplied)
@@ -1036,6 +1053,44 @@ end
     @test tree === GO.SpatialTreeInterface.spatialtree(gv_missing)
     @test tree isa GO.FlexibleRTrees.RTree
     @test GO.SpatialTreeInterface.query(tree, GI.Point(2.0, 2.0)) == [3]
+end
+
+@testitem "GeometryVector lazy spatial index" setup = [Setup] begin
+    using GeometryOps.SpatialTreeInterface: spatialtree, query
+
+    lazy = GDF.GeometryVector(AG.createpoint.(coords))
+    @test lazy.index[] === nothing
+
+    tree = spatialtree(lazy)
+    @test tree isa GO.FlexibleRTrees.RTree
+    @test lazy.index[] === tree
+    @test spatialtree(lazy) === tree
+
+    push!(lazy, AG.createpoint(2.0, 2.0))
+    @test lazy.index[] === nothing
+    grown = spatialtree(lazy)
+    @test grown !== tree
+    @test query(grown, GI.Point(2.0, 2.0)) == [length(lazy)]
+
+    lazy[1] = AG.createpoint(3.0, 3.0)
+    @test lazy.index[] === nothing
+    @test spatialtree(lazy) isa GO.FlexibleRTrees.RTree
+
+    # A tree built on first query answers queries like one built up front.
+    eager = GDF.GeometryVector(collect(lazy); create_index = true)
+    fresh = GDF.GeometryVector(collect(lazy))
+    box = GDF.Extent(X = (0.0, 0.5), Y = (0.0, 0.5))
+    @test query(spatialtree(fresh), box) == query(eager.index[], box)
+    for geom in lazy
+        @test query(spatialtree(fresh), geom) == query(eager.index[], geom)
+    end
+
+    lazy_df = GDF.read(fn)
+    eager_df = GDF.read(fn; create_index = true)
+    read_box = GI.extent(eager_df.geometry[1])
+    read_hits = query(spatialtree(lazy_df.geometry), read_box)
+    @test !isempty(read_hits)
+    @test read_hits == query(eager_df.geometry.index[], read_box)
 end
 
 @testitem "Metadata" setup = [Setup] begin

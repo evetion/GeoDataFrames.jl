@@ -44,11 +44,12 @@ const lookup_type = Dict{Tuple{DataType,Int},AG.OGRwkbGeometryType}(
 )
 
 """
-    read(fn::AbstractString; create_index=true, kwargs...)
+    read(fn::AbstractString; create_index=false, kwargs...)
 
 Read a file into a `DataFrame`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
-Geometry columns are wrapped in `GeometryVector` and indexed eagerly by default; pass
-`create_index=false` to skip building the spatial tree.
+Geometry columns are wrapped in `GeometryVector`, which builds its spatial tree on the
+first spatial query and caches it; pass `create_index=true` to build that tree while
+reading.
 
 Returns a `DataFrame` whose geometry column(s) hold GeoInterface.jl compatible geometries, with
 the coordinate reference system and geometry column names stored as table metadata.
@@ -68,7 +69,7 @@ julia> names(df2)
  "name"
 ```
 """
-function read(fn; create_index::Bool=true, kwargs...)
+function read(fn; create_index::Bool=false, kwargs...)
     gfn = _gdal_path(fn)
     ext = last(splitext(fn))
     # Native drivers cannot handle GDAL virtual filesystem paths, including
@@ -94,7 +95,7 @@ const NATIVE_FASTER = Set([
     (GeoArrowDriver, :read),
 ])
 
-function read(driver::AbstractDriver, fn::AbstractString; create_index::Bool=true, kwargs...)
+function read(driver::AbstractDriver, fn::AbstractString; create_index::Bool=false, kwargs...)
     if (typeof(driver), :read) in NATIVE_FASTER
         @info "Using GDAL for reading, import $(package(driver)) for a faster native driver."
     else
@@ -116,7 +117,7 @@ function read(
     fn::AbstractString;
     layer=nothing,
     flags=AG.OF_READONLY | AG.OF_VERBOSE_ERROR,
-    create_index::Bool=true,
+    create_index::Bool=false,
     kwargs...,
 )
     fn = _gdal_path(fn)

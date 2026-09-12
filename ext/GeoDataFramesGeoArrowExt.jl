@@ -12,7 +12,7 @@ Read `fn` using the GeoArrowDriver driver. Any additional keyword arguments are 
 function GeoDataFrames.read(
     ::GeoArrowDriver,
     fname::AbstractString;
-    create_index::Bool=true,
+    create_index::Bool=false,
     kwargs...,
 )
     df = GeoArrow.read(fname; kwargs...)
