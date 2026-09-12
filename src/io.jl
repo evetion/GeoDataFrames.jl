@@ -346,43 +346,12 @@ function write(
                     setmetadatalayer!(layer, table)
                 end
 
-                for chunk in Iterators.partition(rows, chunksize)
-                    can_use_transaction &&
-                        AG.GDAL.gdaldatasetstarttransaction(ds.ptr, false)
-
-                    for row in chunk
-                        AG.addfeature(layer) do feature
-                            for (i, geom_column) in enumerate(geometrycolumns)
-                                geometry = Tables.getcolumn(row, geom_column)
-                                if ismissing(geometry)
-                                    continue
-                                end
-                                AG.GDAL.ogr_f_setgeomfielddirectly(
-                                    feature.ptr,
-                                    i - 1,
-                                    _convert(AG.Geometry, geometry),
-                                )
-                            end
-                            for (i, (name, _)) in zip(fieldindices, fields)
-                                field = Tables.getcolumn(row, name)
-                                if !ismissing(field)
-                                    AG.setfield!(feature, i, field)
-                                else
-                                    AG.GDAL.ogr_f_setfieldnull(feature.ptr, i)
-                                end
-                            end
-                        end
-                    end
-                    if can_use_transaction
-                        try
-                            AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
-                        catch e
-                            e isa AG.GDAL.GDALError &&
-                                AG.GDAL.gdaldatasetrollbacktransaction(ds.ptr)
-                            rethrow(e)
-                        end
-                    end
-                end
+                # P2: iterate typed columns behind a function barrier instead of
+                # `DataFrameRow` + type-unstable `Tables.getcolumn(row, name)`.
+                _writefeatures!(
+                    layer, ds, table, rows, geometrycolumns, fields, fieldindices,
+                    chunksize, can_use_transaction,
+                )
                 if !can_create_layer
                     @warn "Can't create layers in this format, copying from memory instead."
                     nlayer = AG.copy(
@@ -414,8 +383,23 @@ const lookup_method = Dict{DataType,Function}(
 )
 
 function _convert(::Type{T}, geom) where {T<:AG.Geometry}
-    trait = GI.geomtrait(geom)
-    f = get(lookup_method, typeof(trait), nothing)
+    return _convert(T, geom, GI.geomtrait(geom))
+end
+
+# Fast path for points: the generic path below costs a `Dict{DataType,Function}`
+# lookup (hashing a `DataType`), a `Vector{Float64}` from `GI.coordinates`, a
+# dynamic `Tuple(coords)` and a dynamic call through the boxed `Function`.
+function _convert(::Type{T}, geom, ::GI.PointTrait) where {T<:AG.Geometry}
+    GI.isempty(geom) && return AG.unsafe_createpoint()
+    return if GI.is3d(geom)
+        AG.unsafe_createpoint(GI.x(geom), GI.y(geom), GI.z(geom))
+    else
+        AG.unsafe_createpoint(GI.x(geom), GI.y(geom))
+    end
+end
+
+function _convert(::Type{T}, geom, tr) where {T<:AG.Geometry}
+    f = get(lookup_method, typeof(tr), nothing)
     isnothing(f) && error(
         "Cannot convert an object of $(typeof(geom)) with the $T trait (yet). Please report an issue.",
     )
@@ -424,4 +408,138 @@ end
 
 function _convert(::Type{T}, geom::AG.IGeometry) where {T<:AG.Geometry}
     return AG.unsafe_clone(geom)
+end
+
+# --- P2: column-oriented feature loop ---------------------------------------
+# `Tables.rows(::DataFrame)` yields `DataFrameRow`s whose `Tables.getcolumn` is
+# type-unstable (one heap-allocated box + one dynamic dispatch per cell). Pull
+# the columns out once and pass them down as a `Tuple` of concretely typed
+# vectors, so the innermost loop is fully inferred.
+const _MAX_BARRIER_FIELDS = 8
+
+function _writefeatures!(
+    layer, ds, table, rows, geometrycolumns, fields, fieldindices,
+    chunksize, can_use_transaction,
+)
+    if Tables.columnaccess(table) && length(fields) <= _MAX_BARRIER_FIELDS
+        cols = Tables.columns(table)
+        geomcols = map(c -> Tables.getcolumn(cols, c), Tuple(geometrycolumns))
+        fieldcols = map(nt -> Tables.getcolumn(cols, first(nt)), Tuple(fields))
+        return _writecolumns!(
+            layer, ds, geomcols, fieldcols, Tuple(fieldindices),
+            chunksize, can_use_transaction,
+        )
+    end
+    return _writerows!(
+        layer, ds, rows, geometrycolumns, fields, fieldindices,
+        chunksize, can_use_transaction,
+    )
+end
+
+@inline _setgeoms!(feature, ::Tuple{}, i, gi) = nothing
+@inline function _setgeoms!(feature, geomcols::Tuple, i, gi)
+    geometry = @inbounds geomcols[1][i]
+    if !ismissing(geometry)
+        AG.GDAL.ogr_f_setgeomfielddirectly(
+            feature.ptr, gi - 1, _convert(AG.Geometry, geometry),
+        )
+    end
+    return _setgeoms!(feature, Base.tail(geomcols), i, gi + 1)
+end
+
+@inline _setflds!(feature, ::Tuple{}, ::Tuple{}, i) = nothing
+@inline function _setflds!(feature, fieldcols::Tuple, fieldindices::Tuple, i)
+    field = @inbounds fieldcols[1][i]
+    if !ismissing(field)
+        AG.setfield!(feature, fieldindices[1], field)
+    else
+        AG.GDAL.ogr_f_setfieldnull(feature.ptr, fieldindices[1])
+    end
+    return _setflds!(feature, Base.tail(fieldcols), Base.tail(fieldindices), i)
+end
+
+function _writechunk!(layer, featuredefn, geomcols::Tuple, fieldcols::Tuple,
+                      fieldindices::Tuple, lo::Int, hi::Int)
+    for i in lo:hi
+        feature = AG.unsafe_createfeature(featuredefn)
+        try
+            _setgeoms!(feature, geomcols, i, 1)
+            _setflds!(feature, fieldcols, fieldindices, i)
+            AG.addfeature!(layer, feature)
+        finally
+            AG.destroy(feature)
+        end
+    end
+    return nothing
+end
+
+function _writecolumns!(layer, ds, geomcols::Tuple, fieldcols::Tuple,
+                        fieldindices::Tuple, chunksize, can_use_transaction)
+    n = if !isempty(geomcols)
+        length(geomcols[1])
+    elseif !isempty(fieldcols)
+        length(fieldcols[1])
+    else
+        0
+    end
+    featuredefn = AG.layerdefn(layer)
+    lo = 1
+    while lo <= n
+        hi = min(lo + chunksize - 1, n)
+        can_use_transaction && AG.GDAL.gdaldatasetstarttransaction(ds.ptr, false)
+        _writechunk!(layer, featuredefn, geomcols, fieldcols, fieldindices, lo, hi)
+        if can_use_transaction
+            try
+                AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
+            catch e
+                e isa AG.GDAL.GDALError &&
+                    AG.GDAL.gdaldatasetrollbacktransaction(ds.ptr)
+                rethrow(e)
+            end
+        end
+        lo = hi + 1
+    end
+    return nothing
+end
+
+# Fallback for row-only Tables.jl sources (unchanged semantics).
+function _writerows!(layer, ds, rows, geometrycolumns, fields, fieldindices,
+                     chunksize, can_use_transaction)
+    featuredefn = AG.layerdefn(layer)
+    for chunk in Iterators.partition(rows, chunksize)
+        can_use_transaction && AG.GDAL.gdaldatasetstarttransaction(ds.ptr, false)
+        for row in chunk
+            feature = AG.unsafe_createfeature(featuredefn)
+            try
+                for (i, geom_column) in enumerate(geometrycolumns)
+                    geometry = Tables.getcolumn(row, geom_column)
+                    ismissing(geometry) && continue
+                    AG.GDAL.ogr_f_setgeomfielddirectly(
+                        feature.ptr, i - 1, _convert(AG.Geometry, geometry),
+                    )
+                end
+                for (i, (name, _)) in zip(fieldindices, fields)
+                    field = Tables.getcolumn(row, name)
+                    if !ismissing(field)
+                        AG.setfield!(feature, i, field)
+                    else
+                        AG.GDAL.ogr_f_setfieldnull(feature.ptr, i)
+                    end
+                end
+                AG.addfeature!(layer, feature)
+            finally
+                AG.destroy(feature)
+            end
+        end
+        if can_use_transaction
+            try
+                AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
+            catch e
+                e isa AG.GDAL.GDALError &&
+                    AG.GDAL.gdaldatasetrollbacktransaction(ds.ptr)
+                rethrow(e)
+            end
+        end
+    end
+    return nothing
 end
