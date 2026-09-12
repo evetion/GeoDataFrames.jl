@@ -7,6 +7,7 @@ authors = ["Maarten Pronk <git@evetion.nl> and contributors"]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
 DataAPI = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Extents = "411431e0-e8b7-467b-b5e0-f676ba4f2910"
 GeoFormatTypes = "68eda718-8dee-11e9-39e7-89f7f65f511f"
 GeoInterface = "cf35fbd7-0cd7-5166-be24-54bfbe79505f"
@@ -66,7 +67,6 @@ julia = "1.10"
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
 ExplicitImports = "7d51a73a-1435-4ff3-83d9-f097790105c7"
 LibGEOS = "a90b1aa1-3769-5649-ba7e-abc5a9d163eb"
@@ -76,4 +76,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
 
 [targets]
-test = ["Aqua", "CSV", "DimensionalData", "ExplicitImports", "Pkg", "Test", "Dates", "Shapefile", "GeoArrow", "GeoJSON", "GeoParquet", "FlatGeobuf", "LibGEOS", "Rasters", "TestItemRunner"]
+test = ["Aqua", "CSV", "DimensionalData", "ExplicitImports", "Pkg", "Test", "Shapefile", "GeoArrow", "GeoJSON", "GeoParquet", "FlatGeobuf", "LibGEOS", "Rasters", "TestItemRunner"]
