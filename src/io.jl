@@ -44,12 +44,17 @@ const lookup_type = Dict{Tuple{DataType,Int},AG.OGRwkbGeometryType}(
 )
 
 """
-    read(fn::AbstractString; create_index=false, kwargs...)
+    read(fn::AbstractString; create_index=false, use_arrow=true, kwargs...)
 
 Read a file into a `DataFrame`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
 Geometry columns are wrapped in `GeometryVector`, which builds its spatial tree on the
 first spatial query and caches it; pass `create_index=true` to build that tree while
 reading.
+
+GDAL reads support GDAL's Arrow C stream, which is an order of magnitude faster than the
+row-by-row reader; pass `use_arrow=false` to force the row-by-row reader. Point layers come
+back as coordinate tuples through the Arrow stream and as `ArchGDAL.IGeometry` through the
+row-by-row reader; every other column matches.
 
 Returns a `DataFrame` whose geometry column(s) hold GeoInterface.jl compatible geometries, with
 the coordinate reference system and geometry column names stored as table metadata.
@@ -95,22 +100,32 @@ const NATIVE_FASTER = Set([
     (GeoArrowDriver, :read),
 ])
 
-function read(driver::AbstractDriver, fn::AbstractString; create_index::Bool=false, kwargs...)
+function read(
+    driver::AbstractDriver,
+    fn::AbstractString;
+    create_index::Bool=false,
+    use_arrow::Bool=true,
+    kwargs...,
+)
     if (typeof(driver), :read) in NATIVE_FASTER
         @info "Using GDAL for reading, import $(package(driver)) for a faster native driver."
     else
         @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
     end
-    read(ArchGDALDriver(), fn; create_index, kwargs...)
+    read(ArchGDALDriver(), fn; create_index, use_arrow, kwargs...)
 end
 
 """
-    read(driver::ArchGDALDriver, fn::AbstractString; layer::Union{Integer,AbstractString}, kwargs...)
+    read(driver::ArchGDALDriver, fn::AbstractString; layer::Union{Integer,AbstractString}, use_arrow=true, kwargs...)
 
 Read a file into a DataFrame using the ArchGDAL driver.
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
 The `options` keyword argument can be used to pass GDAL open options. Returns a `DataFrame`.
+
+Layers that GDAL can stream as Arrow batches are read column at a time; pass
+`use_arrow=false` for the row-by-row reader. See [`read`](@ref) for the one column that
+differs between the two.
 """
 function read(
     driver::ArchGDALDriver,
@@ -118,6 +133,7 @@ function read(
     layer=nothing,
     flags=AG.OF_READONLY | AG.OF_VERBOSE_ERROR,
     create_index::Bool=false,
+    use_arrow::Bool=true,
     kwargs...,
 )
     fn = _gdal_path(fn)
@@ -127,12 +143,12 @@ function read(
         if AG.nlayer(ds) > 1 && isnothing(layer)
             @warn "This file has multiple layers, defaulting to first layer."
         end
-        return read(driver, ds, isnothing(layer) ? 0 : layer, create_index)
+        return read(driver, ds, isnothing(layer) ? 0 : layer, create_index, use_arrow)
     end
     return t
 end
 
-function read(::ArchGDALDriver, ds, layer, create_index::Bool)
+function read(::ArchGDALDriver, ds, layer, create_index::Bool, use_arrow::Bool=true)
     df, gnames, sr, metadata = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(
@@ -152,7 +168,10 @@ function read(::ArchGDALDriver, ds, layer, create_index::Bool)
         end
         names, x = AG.schema_names(AG.layerdefn(table))
         sr = AG.getspatialref(table)
-        df = DataFrame(table)
+        df = use_arrow ? _read_arrow(table) : nothing
+        if isnothing(df)
+            df = DataFrame(table)
+        end
         return df, names, sr, metadata
     end
     if "" in names(df)
