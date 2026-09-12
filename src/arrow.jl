@@ -205,7 +205,7 @@ function _fill!(
     m = Int(array.length)
     values = Ptr{S}(_buffer(array, 2)) + array.offset * sizeof(S)
     if iszero(array.null_count) && S === T && dest isa Vector{T}
-        unsafe_copyto!(pointer(dest, off + 1), Ptr{T}(values), m)
+        GC.@preserve dest unsafe_copyto!(pointer(dest, off + 1), Ptr{T}(values), m)
         return nothing
     end
     validity = Ptr{UInt8}(_buffer(array, 1))
@@ -508,7 +508,8 @@ function _columnplans(layer, schema::_ArrowSchema)
     # FID child is the one column left over; anything else means the schema is
     # not what this consumer assumes.
     for (name, _) in children
-        String(name) in ("OGC_FID", AG.fidcolumnname(layer)) ||
+        (fidcolumn === Symbol("") &&
+         String(name) in ("OGC_FID", AG.fidcolumnname(layer))) ||
             throw(_ArrowUnsupported("unclaimed Arrow column $name"))
     end
 
@@ -603,7 +604,7 @@ function _consume(
     for c in eachindex(columns)
         length(columns[c]) == total || resize!(columns[c], total)
     end
-    return columns, total
+    return columns
 end
 
 function _streamcolumns(layer, nfeature::Int)
@@ -636,8 +637,7 @@ function _streamcolumns(layer, nfeature::Int)
                         ccall(schema.release, Cvoid, (Ptr{_ArrowSchema},), schemaptr)
                 end
             end
-            columns, total = _consume(stream, streamptr, plans, nchildren, nfeature)
-            return names, columns, total
+            return names, _consume(stream, streamptr, plans, nchildren, nfeature)
         finally
             stream.release == C_NULL ||
                 ccall(stream.release, Cvoid, (Ptr{_ArrowArrayStream},), streamptr)
@@ -668,7 +668,7 @@ function _read_arrow(layer)::Union{Nothing,DataFrame}
     nfeature = AG.nfeature(layer)
     nfeature > 0 || return nothing
     try
-        names, columns, total = _streamcolumns(layer, Int(nfeature))
+        names, columns = _streamcolumns(layer, Int(nfeature))
         return DataFrame(
             Pair{Symbol,AbstractVector}[
                 name => _narrow(col) for (name, col) in zip(names, columns)
