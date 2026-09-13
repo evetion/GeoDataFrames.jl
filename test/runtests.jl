@@ -180,7 +180,11 @@ end
         shp = joinpath(testdatadir, "sites.shp")
         default_df = GDF.read(shp)
         @test default_df.geometry isa GDF.GeometryVector
-        @test default_df.geometry.index[] !== nothing
+        @test default_df.geometry.index[] === nothing
+
+        index_df = GDF.read(shp; create_index = true)
+        @test index_df.geometry isa GDF.GeometryVector
+        @test index_df.geometry.index[] !== nothing
 
         noindex_df = GDF.read(shp; create_index = false)
         @test noindex_df.geometry isa GDF.GeometryVector
@@ -191,7 +195,11 @@ end
 
         native_df = GDF.read(GDF.CSVDriver(), csv)
         @test native_df.WKT isa GDF.GeometryVector
-        @test native_df.WKT.index[] !== nothing
+        @test native_df.WKT.index[] === nothing
+
+        native_index_df = GDF.read(GDF.CSVDriver(), csv; create_index = true)
+        @test native_index_df.WKT isa GDF.GeometryVector
+        @test native_index_df.WKT.index[] !== nothing
 
         native_noindex_df = GDF.read(GDF.CSVDriver(), csv; create_index = false)
         @test native_noindex_df.WKT isa GDF.GeometryVector
@@ -299,6 +307,162 @@ end
     @test ismissing(t.name[2])
 end
 
+@testitem "Arrow and row reads agree on a point GeoPackage" setup = [Setup] begin
+    mktempdir() do dir
+        path = joinpath(dir, "arrow_points.gpkg")
+        table = DataFrame(;
+            geometry = [
+                GI.Point(1.0, 2.0),
+                GI.Point(3.0, 4.0),
+                GI.Point(5.0, 6.0),
+                missing,
+            ],
+            i32 = Int32[1, 2, 3, 4],
+            i64 = Int64[10, 20, 30, 40],
+            f64 = [1.5, 2.5, 3.5, 4.5],
+            f32 = Float32[1, 2, 3, 4],
+            name = ["a", "b", "c", "d"],
+            flag = [true, false, true, false],
+            stamp = [
+                DateTime(2020, 1, 1, 10, 30, 0),
+                DateTime(2021, 2, 3, 1, 2, 3),
+                DateTime(1969, 7, 20, 20, 17, 40),
+                DateTime(2000, 1, 1),
+            ],
+            maybe_int = Union{Missing, Int64}[1, missing, 3, missing],
+            maybe_name = Union{Missing, String}["x", missing, "z", missing],
+        )
+        GDF.write(path, table)
+
+        arrow = GDF.read(path)
+        rows = GDF.read(path; use_arrow = false)
+
+        @test names(arrow) == names(rows)
+        @test nrow(arrow) == 4
+        @test DataAPI.metadata(arrow) == DataAPI.metadata(rows)
+        @test GI.crs(arrow) == GI.crs(rows)
+        @test GI.geometrycolumns(arrow) == GI.geometrycolumns(rows)
+        for column in names(arrow)
+            column == "geometry" && continue
+            @test eltype(arrow[!, column]) == eltype(rows[!, column])
+            @test isequal(arrow[!, column], rows[!, column])
+        end
+
+        # Points arrive as coordinate tuples on the Arrow path, as
+        # `ArchGDAL.IGeometry` on the row path.
+        @test eltype(arrow.geometry) == Union{Missing, Tuple{Float64, Float64}}
+        @test ismissing(arrow.geometry[4])
+        @test ismissing(rows.geometry[4])
+        @test [GI.x(g) for g in skipmissing(arrow.geometry)] ==
+              [GI.x(g) for g in skipmissing(rows.geometry)]
+        @test [GI.y(g) for g in skipmissing(arrow.geometry)] ==
+              [GI.y(g) for g in skipmissing(rows.geometry)]
+        @test arrow.geometry isa GDF.GeometryVector
+        @test arrow.geometry.index[] === nothing
+        @test GDF.read(path; create_index = true).geometry.index[] !== nothing
+    end
+end
+
+@testitem "Arrow and row reads agree on a polygon GeoPackage" setup = [Setup] begin
+    countries = GDF.read(joinpath(testdatadir, "countries.fgb"); use_arrow = false)
+    mktempdir() do dir
+        path = joinpath(dir, "arrow_countries.gpkg")
+        GDF.write(path, countries)
+
+        # A silent fall back to the row path would make every check below pass
+        # against itself.
+        @test AG.read(path) do ds
+            AG.getlayer(ds, 0) do layer
+                !isnothing(GDF._read_arrow(layer))
+            end
+        end
+
+        arrow = GDF.read(path)
+        rows = GDF.read(path; use_arrow = false)
+
+        @test names(arrow) == names(rows)
+        @test nrow(arrow) == nrow(countries)
+        @test DataAPI.metadata(arrow) == DataAPI.metadata(rows)
+        @test GI.crs(arrow) == GI.crs(rows)
+        for column in names(arrow)
+            @test eltype(arrow[!, column]) == eltype(rows[!, column])
+        end
+        @test eltype(arrow.geometry) == AG.IGeometry{AG.wkbMultiPolygon}
+        @test isequal(arrow.id, rows.id)
+        @test isequal(arrow.name, rows.name)
+        @test isequal(arrow.fid, rows.fid)
+        @test all(
+            GI.coordinates(a) == GI.coordinates(b) for
+            (a, b) in zip(arrow.geometry, rows.geometry)
+        )
+    end
+end
+
+@testitem "Arrow read of OGR date and binary fields" setup = [Setup] begin
+    # `GeoDataFrames.write` cannot produce OFTDate or OFTBinary fields, so build
+    # the layer straight through ArchGDAL to cover Arrow date32 and binary.
+    mktempdir() do dir
+        path = joinpath(dir, "arrow_fields.gpkg")
+        AG.create(path; driver = AG.getdriver("GPKG")) do ds
+            AG.newspatialref() do spatialref
+                AG.importEPSG!(spatialref, 4326)
+                AG.createlayer(;
+                    name = "fields",
+                    dataset = ds,
+                    geom = AG.wkbPoint,
+                    spatialref = spatialref,
+                ) do layer
+                    for (name, fieldtype) in
+                        (("day", AG.OFTDate), ("blob", AG.OFTBinary))
+                        AG.createfielddefn(name, fieldtype) do fielddefn
+                            AG.addfielddefn!(layer, fielddefn)
+                        end
+                    end
+                    featuredefn = AG.layerdefn(layer)
+                    for i in 1:3
+                        feature = AG.unsafe_createfeature(featuredefn)
+                        AG.GDAL.ogr_f_setgeomfielddirectly(
+                            feature.ptr,
+                            0,
+                            AG.unsafe_createpoint(Float64(i), Float64(i)),
+                        )
+                        AG.setfield!(feature, 0, DateTime(2020, 1, i))
+                        AG.setfield!(feature, 1, UInt8[0x01, 0x02, UInt8(i)])
+                        AG.addfeature!(layer, feature)
+                        AG.destroy(feature)
+                    end
+                end
+            end
+        end
+
+        arrow = GDF.read(path)
+        rows = GDF.read(path; use_arrow = false)
+
+        @test names(arrow) == names(rows)
+        @test eltype(arrow.day) == eltype(rows.day) == DateTime
+        @test arrow.day == rows.day == DateTime.(2020, 1, 1:3)
+        @test eltype(arrow.blob) == eltype(rows.blob) == Vector{UInt8}
+        @test arrow.blob == rows.blob
+    end
+end
+
+@testitem "Arrow read of 500k points" setup = [Setup] begin
+    # Machine-local benchmark fixture; the test is skipped where it is absent.
+    path = "/home/anshul/.julia/dev/geo/vector-benchmark/data/points.gpkg"
+    if isfile(path)
+        arrow = GDF.read(path; create_index = false)
+        rows = GDF.read(path; create_index = false, use_arrow = false)
+        @test nrow(arrow) == nrow(rows) == 500_000
+        @test names(arrow) == names(rows) == ["fid", "geometry"]
+        @test collect(arrow.fid) == collect(rows.fid)
+        @test GI.crs(arrow) == GI.crs(rows)
+        @test all(GI.x(a) == GI.x(b) for (a, b) in zip(arrow.geometry, rows.geometry))
+        @test all(GI.y(a) == GI.y(b) for (a, b) in zip(arrow.geometry, rows.geometry))
+    else
+        @test_skip nrow(GDF.read(path)) == 500_000
+    end
+end
+
 @testitem "Read self written file" setup = [Setup] begin
 
     # Save table with a few random points
@@ -356,7 +520,7 @@ end
     GDF.write(joinpath(testdatadir, "test_exotic.gpkg"), t)
     GDF.write(joinpath(testdatadir, "test_exotic.geojson"), t)
     tt = GDF.read(joinpath(testdatadir, "test_exotic.gpkg"))
-    @test AG.getx.(tt.geometry, 0) == AG.getx.(t.geometry, 0)
+    @test GI.x.(tt.geometry) == GI.x.(t.geometry)
     @test tt.flag == t.flag
     @test tt.ex1 == t.ex1
     @test tt.ex2 == t.ex2
@@ -823,7 +987,7 @@ end
 @testitem "GeoArrow" setup = [Setup] begin
     using GeoArrow
     fn = joinpath(testdatadir, "example-multipolygon_z.arrow")
-    native_df = GDF.read(GDF.GeoArrowDriver(), fn)
+    native_df = GDF.read(GDF.GeoArrowDriver(), fn; create_index = true)
     @test native_df.geometry isa GDF.GeometryVector
     @test native_df.geometry.index[] !== nothing
 
@@ -999,21 +1163,30 @@ end
 end
 
 @testitem "GeometryVector spatial trees" setup = [Setup] begin
-    gv = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]))
-    @test gv.index[] !== nothing
-    @test typeof(gv).parameters[2] == Union{Nothing,typeof(gv.index[])}
+    eager = GDF.GeometryVector(
+        AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]);
+        create_index = true,
+    )
+    @test eager.index[] !== nothing
+    @test typeof(eager).parameters[2] == Union{Nothing,typeof(eager.index[])}
 
-    lazy = GDF.GeometryVector(
+    # Every construction path types its cache slot for the tree that a later
+    # query builds, whether or not one is cached yet.
+    lazy = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]))
+    @test lazy.index[] === nothing
+    @test typeof(lazy).parameters[2] === typeof(eager).parameters[2]
+
+    explicit = GDF.GeometryVector(
         AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]);
         create_index = false,
     )
-    @test lazy.index[] === nothing
-    @test typeof(lazy).parameters[2] === Nothing
+    @test explicit.index[] === nothing
+    @test typeof(explicit).parameters[2] === typeof(eager).parameters[2]
 
-    allocated = similar(gv, eltype(gv), size(gv))
+    allocated = similar(eager, eltype(eager), size(eager))
     @test allocated isa GDF.GeometryVector
     @test allocated.index[] === nothing
-    @test typeof(allocated).parameters[2] === Nothing
+    @test typeof(allocated).parameters[2] === typeof(eager).parameters[2]
 
     supplied = Ref{Any}(:cached)
     wrapped = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)]), supplied)
@@ -1036,6 +1209,44 @@ end
     @test tree === GO.SpatialTreeInterface.spatialtree(gv_missing)
     @test tree isa GO.FlexibleRTrees.RTree
     @test GO.SpatialTreeInterface.query(tree, GI.Point(2.0, 2.0)) == [3]
+end
+
+@testitem "GeometryVector lazy spatial index" setup = [Setup] begin
+    using GeometryOps.SpatialTreeInterface: spatialtree, query
+
+    lazy = GDF.GeometryVector(AG.createpoint.(coords))
+    @test lazy.index[] === nothing
+
+    tree = spatialtree(lazy)
+    @test tree isa GO.FlexibleRTrees.RTree
+    @test lazy.index[] === tree
+    @test spatialtree(lazy) === tree
+
+    push!(lazy, AG.createpoint(2.0, 2.0))
+    @test lazy.index[] === nothing
+    grown = spatialtree(lazy)
+    @test grown !== tree
+    @test query(grown, GI.Point(2.0, 2.0)) == [length(lazy)]
+
+    lazy[1] = AG.createpoint(3.0, 3.0)
+    @test lazy.index[] === nothing
+    @test spatialtree(lazy) isa GO.FlexibleRTrees.RTree
+
+    # A tree built on first query answers queries like one built up front.
+    eager = GDF.GeometryVector(collect(lazy); create_index = true)
+    fresh = GDF.GeometryVector(collect(lazy))
+    box = GDF.Extent(X = (0.0, 0.5), Y = (0.0, 0.5))
+    @test query(spatialtree(fresh), box) == query(eager.index[], box)
+    for geom in lazy
+        @test query(spatialtree(fresh), geom) == query(eager.index[], geom)
+    end
+
+    lazy_df = GDF.read(fn)
+    eager_df = GDF.read(fn; create_index = true)
+    read_box = GI.extent(eager_df.geometry[1])
+    read_hits = query(spatialtree(lazy_df.geometry), read_box)
+    @test !isempty(read_hits)
+    @test read_hits == query(eager_df.geometry.index[], read_box)
 end
 
 @testitem "Metadata" setup = [Setup] begin
