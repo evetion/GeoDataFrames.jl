@@ -845,6 +845,26 @@ end
     @test GDF.write("test_native.arrow", df) == "test_native.arrow"
     @test GDF.write(GDF.ArchGDALDriver(), "test.arrow", df) == "test.arrow"
     GDF.write(GDF.ArchGDALDriver(), "test.arrow", df2)
+
+    # GeoArrow metadata holds the CRS as a PROJJSON object
+    mktempdir() do dir
+        projjson = GFT.val(convert(GFT.ProjJSON, GDF.Proj.CRS(GFT.EPSG(4326))))
+        plain_fn = joinpath(dir, "plain.arrow")
+        GDF.write(plain_fn, GDF.DataFrame(geometry = [GI.Point(1.0, 2.0)]))
+        crs_fn = joinpath(dir, "crs.arrow")
+        GeoArrow.Arrow.write(
+            crs_fn,
+            GeoArrow.Arrow.Table(plain_fn);
+            colmetadata = Dict(:geometry => Dict(
+                "ARROW:extension:name" => "geoarrow.point",
+                "ARROW:extension:metadata" => "{\"crs\": $projjson}",
+            )),
+        )
+        crs_df = GDF.read(GDF.GeoArrowDriver(), crs_fn)
+        @test GI.crs(crs_df) isa GFT.ProjJSON
+        @test GI.crstrait(crs_df.geometry) isa GI.GeographicTrait
+        @test keys(crs_df.geometry.index[].extent) == (:X, :Y, :Z)
+    end
 end
 
 @testitem "Combination of drivers" setup = [Setup] begin
