@@ -1,24 +1,28 @@
 """
-    GeometryVector(A[, index]; crs=nothing)
+    GeometryVector(A; crs=nothing, create_index=true)
+    GeometryVector(A, index; manifold=Planar())
 
 Wrapper for geometry columns in GeoDataFrames.
 
 `GeometryVector` behaves like a mutable `AbstractVector` and stores one optional
 spatial tree in `index`. Supported mutations clear that stored tree.
-The tree is built on the sphere when `crs` is geographic, and on the plane otherwise.
+The tree is built on the sphere when `crs` is geographic, and on the plane otherwise;
+only that `manifold` is stored, so the tree can be rebuilt after a mutation.
 """
 struct GeometryVector{T,I} <: AbstractArray{T,1}
     A::Vector{T}
     index::Ref{I}
-    crs
+    manifold::GO.Manifold
 end
 
-GeometryVector(A::AbstractVector; crs=nothing, create_index::Bool=true) =
-    GeometryVector(A, create_index ? spatialtree(_manifold(crs), A) : nothing; crs)
-GeometryVector(A::AbstractVector, index::I; crs=nothing) where {I} =
-    GeometryVector{eltype(A),Union{Nothing,I}}(A, Ref{Union{Nothing,I}}(index), crs)
-GeometryVector(A::Vector{T}, index::Ref{I}; crs=nothing) where {T,I} =
-    GeometryVector{T,I}(A, index, crs)
+function GeometryVector(A::AbstractVector; crs=nothing, create_index::Bool=true)
+    manifold = _manifold(crs)
+    return GeometryVector(A, create_index ? spatialtree(manifold, A) : nothing; manifold)
+end
+GeometryVector(A::AbstractVector, index::I; manifold::GO.Manifold=GO.Planar()) where {I} =
+    GeometryVector{eltype(A),Union{Nothing,I}}(A, Ref{Union{Nothing,I}}(index), manifold)
+GeometryVector(A::Vector{T}, index::Ref{I}; manifold::GO.Manifold=GO.Planar()) where {T,I} =
+    GeometryVector{T,I}(A, index, manifold)
 
 Base.parent(G::GeometryVector) = G.A
 Base.size(G::GeometryVector) = size(parent(G))
@@ -56,11 +60,8 @@ end
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-array
 function Base.similar(G::GeometryVector, ::Type{T}, dims::Dims) where {T}
     A = similar(parent(G), T, dims)
-    length(dims) == 1 ? GeometryVector(A, nothing; crs=GI.crs(G)) : A
+    length(dims) == 1 ? GeometryVector(A, nothing; G.manifold) : A
 end
-
-GI.crs(G::GeometryVector) = G.crs
-GI.crstrait(G::GeometryVector) = _crstrait(GI.crs(G))
 
 _crstrait(::Nothing) = GI.UnknownTrait()
 _crstrait(crs) = _crstrait(convert(Proj.CRS, crs))
@@ -82,7 +83,7 @@ function spatialtree(G::GeometryVector)
     tree = G.index[]
     tree !== nothing && return tree
 
-    tree = spatialtree(_manifold(GI.crs(G)), parent(G))
+    tree = spatialtree(G.manifold, parent(G))
     G.index[] = tree
     return tree
 end

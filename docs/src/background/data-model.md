@@ -24,10 +24,10 @@ reference](../reference/metadata.md) for the keys and accessors.
 Reading can place a geometry column in a `GeometryVector`, a mutable wrapper
 around an underlying vector, `A`. Its optional `index` field holds a cached
 spatial tree. Supported mutations clear that cache, so it cannot describe
-stale geometries. The vector also keeps the table's CRS: for a geographic CRS
-the tree is built on the sphere, over 3D unit-sphere extents, and otherwise on
-the plane. `setcrs!` and `reproject!` replace the column with a new
-`GeometryVector` for the new CRS.
+stale geometries. For a geographic CRS the tree is built on the sphere, over 3D
+unit-sphere extents, and otherwise on the plane; the vector keeps that manifold
+to rebuild the tree after a mutation. `setcrs!` and `reproject!` replace the
+column with a new `GeometryVector` for the new CRS.
 `GeometryVector` is an implementation detail of read
 results: a table supplied to `write` need only provide
 GeoInterface-compatible geometry columns. See [spatial
