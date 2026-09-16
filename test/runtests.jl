@@ -1038,6 +1038,48 @@ end
     @test GO.SpatialTreeInterface.query(tree, GI.Point(2.0, 2.0)) == [3]
 end
 
+@testitem "GeometryVector spatial trees follow the CRS" setup = [Setup] begin
+    using DataFrames
+
+    points = AG.createpoint.([(179.9, 0.0), (0.0, 0.0), (-179.9, 0.0)])
+
+    planar = GDF.GeometryVector(points)
+    @test isnothing(GI.crs(planar))
+    @test keys(planar.index[].extent) == (:X, :Y)
+
+    projected = GDF.GeometryVector(points; crs = GFT.EPSG(28992))
+    @test GI.crs(projected) == GFT.EPSG(28992)
+    @test GI.crstrait(projected) isa GI.ProjectedTrait
+    @test keys(projected.index[].extent) == (:X, :Y)
+
+    geographic = GDF.GeometryVector(points; crs = GFT.EPSG(4326))
+    @test GI.crstrait(geographic) isa GI.GeographicTrait
+    tree = GO.SpatialTreeInterface.spatialtree(geographic)
+    @test keys(tree.extent) == (:X, :Y, :Z)
+    # Across the antimeridian, the first and last points are near each other on the sphere.
+    near_antimeridian = GI.LineString([(179.0, -1.0), (-179.0, 1.0)])
+    @test GO.SpatialTreeInterface.query(tree, GO.extent(GO.Spherical(), near_antimeridian)) == [1, 3]
+
+    @test GI.crs(similar(geographic)) == GFT.EPSG(4326)
+    @test GI.crs(copy(geographic)) == GFT.EPSG(4326)
+
+    df = DataFrame(geometry = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)])))
+    column = df.geometry
+    GDF.setcrs!(df, GFT.EPSG(4326))
+    @test df.geometry !== column
+    @test isnothing(GI.crs(column))
+    @test GI.crs(df.geometry) == GFT.EPSG(4326)
+    @test keys(df.geometry.index[].extent) == (:X, :Y, :Z)
+
+    GDF.reproject!(df, GFT.EPSG(3857))
+    @test GI.crs(df.geometry) == GFT.EPSG(3857)
+    @test keys(df.geometry.index[].extent) == (:X, :Y)
+
+    df = GDF.read(joinpath(testdatadir, "test_points.geojson"))
+    @test GI.crstrait(df.geometry) isa GI.GeographicTrait
+    @test keys(df.geometry.index[].extent) == (:X, :Y, :Z)
+end
+
 @testitem "Metadata" setup = [Setup] begin
     df = DataFrame(a=1, geometry=[(1.,2.)])
     DataAPI.metadata!(df, "author", "test")

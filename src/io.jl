@@ -165,7 +165,7 @@ function read(::ArchGDALDriver, ds, layer, create_index::Bool)
     geometrycolumns = Tuple(gnames)
 
     for column in geometrycolumns
-        df[!, column] = GeometryVector(df[!, column]; create_index)
+        df[!, column] = GeometryVector(df[!, column]; crs, create_index)
     end
 
     for (k, v) in pairs(metadata)
