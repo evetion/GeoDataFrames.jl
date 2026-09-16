@@ -87,3 +87,6 @@ function spatialtree(G::GeometryVector)
     G.index[] = tree
     return tree
 end
+
+# The stored tree serves any request on its own manifold, such as from a spatial join.
+spatialtree(m::GO.Manifold, G::GeometryVector) = m == G.manifold ? spatialtree(G) : spatialtree(m, parent(G))

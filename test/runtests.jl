@@ -1084,6 +1084,9 @@ end
     @test geographic.index[] === nothing
     @test keys(GO.SpatialTreeInterface.spatialtree(geographic).extent) == (:X, :Y, :Z)
 
+    @test GO.SpatialTreeInterface.spatialtree(GO.Spherical(), geographic) === geographic.index[]
+    @test keys(GO.SpatialTreeInterface.spatialtree(GO.Planar(), geographic).extent) == (:X, :Y)
+
     @test similar(geographic).manifold isa GO.Spherical
     @test copy(geographic).manifold isa GO.Spherical
 
