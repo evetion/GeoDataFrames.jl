@@ -845,6 +845,26 @@ end
     @test GDF.write("test_native.arrow", df) == "test_native.arrow"
     @test GDF.write(GDF.ArchGDALDriver(), "test.arrow", df) == "test.arrow"
     GDF.write(GDF.ArchGDALDriver(), "test.arrow", df2)
+
+    # GeoArrow metadata holds the CRS as a PROJJSON object
+    mktempdir() do dir
+        projjson = GFT.val(convert(GFT.ProjJSON, GDF.Proj.CRS(GFT.EPSG(4326))))
+        plain_fn = joinpath(dir, "plain.arrow")
+        GDF.write(plain_fn, GDF.DataFrame(geometry = [GI.Point(1.0, 2.0)]))
+        crs_fn = joinpath(dir, "crs.arrow")
+        GeoArrow.Arrow.write(
+            crs_fn,
+            GeoArrow.Arrow.Table(plain_fn);
+            colmetadata = Dict(:geometry => Dict(
+                "ARROW:extension:name" => "geoarrow.point",
+                "ARROW:extension:metadata" => "{\"crs\": $projjson}",
+            )),
+        )
+        crs_df = GDF.read(GDF.GeoArrowDriver(), crs_fn)
+        @test GI.crs(crs_df) isa GFT.ProjJSON
+        @test crs_df.geometry.manifold isa GO.Spherical
+        @test keys(crs_df.geometry.index[].extent) == (:X, :Y, :Z)
+    end
 end
 
 @testitem "Combination of drivers" setup = [Setup] begin
@@ -1036,6 +1056,55 @@ end
     @test tree === GO.SpatialTreeInterface.spatialtree(gv_missing)
     @test tree isa GO.FlexibleRTrees.RTree
     @test GO.SpatialTreeInterface.query(tree, GI.Point(2.0, 2.0)) == [3]
+end
+
+@testitem "GeometryVector spatial trees follow the CRS" setup = [Setup] begin
+    using DataFrames
+
+    points = AG.createpoint.([(179.9, 0.0), (0.0, 0.0), (-179.9, 0.0)])
+
+    planar = GDF.GeometryVector(points)
+    @test planar.manifold isa GO.Planar
+    @test keys(planar.index[].extent) == (:X, :Y)
+
+    projected = GDF.GeometryVector(points; crs = GFT.EPSG(28992))
+    @test projected.manifold isa GO.Planar
+    @test keys(projected.index[].extent) == (:X, :Y)
+
+    geographic = GDF.GeometryVector(copy(points); crs = GFT.EPSG(4326))
+    @test geographic.manifold isa GO.Spherical
+    tree = GO.SpatialTreeInterface.spatialtree(geographic)
+    @test keys(tree.extent) == (:X, :Y, :Z)
+    # Across the antimeridian, the first and last points are near each other on the sphere.
+    near_antimeridian = GI.LineString([(179.0, -1.0), (-179.0, 1.0)])
+    @test GO.SpatialTreeInterface.query(tree, GO.extent(GO.Spherical(), near_antimeridian)) == [1, 3]
+
+    # A mutation clears the tree, which is rebuilt on the same manifold.
+    push!(geographic, AG.createpoint(10.0, 10.0))
+    @test geographic.index[] === nothing
+    @test keys(GO.SpatialTreeInterface.spatialtree(geographic).extent) == (:X, :Y, :Z)
+
+    @test GO.SpatialTreeInterface.spatialtree(GO.Spherical(), geographic) === geographic.index[]
+    @test keys(GO.SpatialTreeInterface.spatialtree(GO.Planar(), geographic).extent) == (:X, :Y)
+
+    @test similar(geographic).manifold isa GO.Spherical
+    @test copy(geographic).manifold isa GO.Spherical
+
+    df = DataFrame(geometry = GDF.GeometryVector(AG.createpoint.([(0.0, 0.0), (1.0, 1.0)])))
+    column = df.geometry
+    GDF.setcrs!(df, GFT.EPSG(4326))
+    @test df.geometry !== column
+    @test column.manifold isa GO.Planar
+    @test df.geometry.manifold isa GO.Spherical
+    @test keys(df.geometry.index[].extent) == (:X, :Y, :Z)
+
+    GDF.reproject!(df, GFT.EPSG(3857))
+    @test df.geometry.manifold isa GO.Planar
+    @test keys(df.geometry.index[].extent) == (:X, :Y)
+
+    df = GDF.read(joinpath(testdatadir, "test_points.geojson"))
+    @test df.geometry.manifold isa GO.Spherical
+    @test keys(df.geometry.index[].extent) == (:X, :Y, :Z)
 end
 
 @testitem "Metadata" setup = [Setup] begin

@@ -21,14 +21,10 @@ function GeoDataFrames.read(
         @error "GeoJSON backend does not support $(setdiff(kwargnames, readkwargs)) as keyword arguments."
     table = GeoJSON.read(fname; kwargs...)
     df = GeoDataFrames.DataFrame(table; copycols=false)
-    GeoDataFrames.metadata!(
-        df,
-        "GEOINTERFACE:crs",
-        GeoDataFrames.GI.crs(table);
-        style=:note,
-    )
+    crs = GeoDataFrames.GI.crs(table)
+    GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", crs; style=:note)
     GeoDataFrames.metadata!(df, "GEOINTERFACE:geometrycolumns", (:geometry,); style=:note)
-    df[!, :geometry] = GeometryVector(df[!, :geometry]; create_index)
+    df[!, :geometry] = GeometryVector(df[!, :geometry]; crs, create_index)
     return df
 end
 
