@@ -14,11 +14,13 @@ import GeometryOps.SpatialTreeInterface: spatialtree
 using GeometryOps: GeometryOps
 import Proj  # For GO reproject
 import WellKnownGeometry
+using PrecompileTools: @setup_workload, @compile_workload
 
 include("vector.jl")
 include("exports.jl")
 include("drivers.jl")
 include("utils.jl")
 include("io.jl")
+include("precompile.jl")
 
 end  # module
