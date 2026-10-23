@@ -18,7 +18,9 @@ function GeoDataFrames.read(
     df = GeoParquet.read(fname; kwargs...)
     crs = GeoDataFrames.metadata(df, "GEOINTERFACE:crs", nothing)
     if !isnothing(crs) && (crs.val != "" || crs.val != "null")
-        ncrs = GeoDataFrames.GFT.ProjJSON(GeoParquet.JSON3.write(crs.val))
+        # GeoParquet uses JSON since 0.4, JSON3 before
+        json = isdefined(GeoParquet, :JSON) ? GeoParquet.JSON.json : GeoParquet.JSON3.write
+        ncrs = GeoDataFrames.GFT.ProjJSON(json(crs.val))
         GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", ncrs; style=:note)
     end
     for geom in GeoDataFrames.getgeometrycolumns(df)
