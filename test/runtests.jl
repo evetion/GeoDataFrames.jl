@@ -149,10 +149,8 @@ end
         )
 
         raw_pooled = CSV.read(pooled, GDF.DataFrame)
-        @test raw_pooled.WKT isa getfield(
-            parentmodule(typeof(raw_pooled.WKT)),
-            :PooledVector,
-        )
+        # A PooledVector with CSV 0.10, a DataStrings.StringVector with CSV 1
+        @test !(raw_pooled.WKT isa Vector)
 
         pooled_df = GDF.read(pooled)
 
