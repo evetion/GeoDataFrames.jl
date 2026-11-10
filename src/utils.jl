@@ -178,7 +178,16 @@ For transforming geometries, use [`reproject!(df, target_crs)`](@ref) instead.
 `crs` should be one of GeoFormatTypes wrappers, such as `EPSG(code)`.
 Retrieve it with [`GeoInterface.crs(df)`](@ref).
 """
-setcrs!(df::DataFrame, crs) = metadata!(df, "GEOINTERFACE:crs", crs; style = :note)
+function setcrs!(df::DataFrame, crs)
+    columns = Tables.columns(df)
+    for gc in getgeometrycolumns(df)
+        gc in Tables.columnnames(columns) || continue
+        column = df[!, gc]
+        column isa GeometryVector || continue
+        df[!, gc] = GeometryVector(copy(parent(column)); crs)
+    end
+    metadata!(df, "GEOINTERFACE:crs", crs; style = :note)
+end
 
 """
     reproject(df::DataFrame, target_crs; [always_xy=true,])
@@ -242,7 +251,7 @@ function reproject!(df::DataFrame, source_crs, target_crs; always_xy = true, kwa
         df[!, gc] = _reproject(df[!, gc], source_crs, target_crs; always_xy, kwargs...)
     end
     metadata!(df, "crs", target_crs; style = :note)
-    metadata!(df, "GEOINTERFACE:crs", target_crs; style = :note)
+    setcrs!(df, target_crs)
 end
 
 function _reproject(sv::AbstractVector, source_crs, target_crs; always_xy = true, kwargs...)

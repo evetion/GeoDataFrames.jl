@@ -15,7 +15,7 @@ function GeoDataFrames.read(
     ncrs = GeoDataFrames.GI.crs(table)
     GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", ncrs; style=:note)
     GeoDataFrames.metadata!(df, "GEOINTERFACE:geometrycolumns", (:geometry,); style=:note)
-    df[!, :geometry] = GeoDataFrames.GeometryVector(df[!, :geometry]; create_index)
+    df[!, :geometry] = GeoDataFrames.GeometryVector(df[!, :geometry]; crs=ncrs, create_index)
     return df
 end
 

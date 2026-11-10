@@ -24,7 +24,7 @@ function GeoDataFrames.read(
         GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", ncrs; style=:note)
     end
     for geom in GeoDataFrames.getgeometrycolumns(df)
-        df[!, geom] = GeometryVector(df[!, geom]; create_index)
+        df[!, geom] = GeometryVector(df[!, geom]; crs=GI.crs(df), create_index)
     end
     return df
 end

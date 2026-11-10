@@ -22,12 +22,18 @@ function GeoDataFrames.read(
         GeoDataFrames.getgeometrycolumns(df);
         style=:note,
     )
+    crs = GI.crs(df)
+    # GeoArrow stores the CRS as a PROJJSON object, which Proj only reads as a string.
+    if crs isa AbstractDict
+        crs = GeoDataFrames.GFT.ProjJSON(GeoArrow.JSON3.write(crs))
+        GeoDataFrames.metadata!(df, "GEOINTERFACE:crs", crs; style=:note)
+    end
     # Replacing a column below resets the `:default`-style metadata of *every*
     # column in the DataFrame (not just the one being replaced), so snapshot
     # all colmetadata upfront and restore it once all mutations are done.
     allcolmeta = Dict(col => GeoDataFrames.colmetadata(df, col) for col in names(df))
     for geom in GeoDataFrames.getgeometrycolumns(df)
-        df[!, geom] = GeometryVector(collect(df[!, geom]); create_index)
+        df[!, geom] = GeometryVector(collect(df[!, geom]); crs, create_index)
     end
     for (col, colmeta) in allcolmeta
         for (k, v) in colmeta
