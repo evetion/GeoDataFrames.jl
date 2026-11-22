@@ -11,7 +11,7 @@ Read `fn` using the FlatGeobufDriver driver.
 function GeoDataFrames.read(
     ::FlatGeobufDriver,
     fname::AbstractString;
-    create_index::Bool=true,
+    create_index::Bool=false,
     kwargs...,
 )
     isempty(kwargs) || @error "FlatGeobuf backend does not use keyword arguments."

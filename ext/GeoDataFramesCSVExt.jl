@@ -10,7 +10,7 @@ as_wkt(value) = ismissing(value) ? missing : getwkt(value).val
 function GeoDataFrames.read(
     ::CSVDriver,
     fname::AbstractString;
-    create_index::Bool=true,
+    create_index::Bool=false,
     stringtype=String,
     kwargs...,
 )

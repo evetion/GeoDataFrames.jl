@@ -8,8 +8,9 @@ geometries. The geometry-column names and coordinate reference system are
 recorded as table metadata; see [Metadata and CRS](metadata-and-crs.md).
 
 `GeometryVector` is an implementation detail used for geometry columns in
-some read results. It is a mutable vector wrapper that can retain a spatial
-index. Tables supplied to `write` do not need to use `GeometryVector`.
+some read results. It is a mutable vector wrapper that caches a spatial index
+once one is needed. Tables supplied to `write` do not need to use
+`GeometryVector`.
 
 ## Geometry columns and table metadata
 
@@ -22,10 +23,12 @@ reference](../reference/metadata.md) for the keys and accessors.
 ## Read-time geometry storage
 
 Reading can place a geometry column in a `GeometryVector`, a mutable wrapper
-around an underlying vector, `A`. Its optional `index` field holds a cached
-spatial tree. Supported mutations clear that cache, so it cannot describe
-stale geometries. `GeometryVector` is an implementation detail of read
-results: a table supplied to `write` need only provide
+around an underlying vector, `A`. Its `index` field caches a spatial tree,
+built on the first spatial query over the column and reused by later queries.
+Supported mutations clear that cache, so it cannot describe stale geometries.
+Reading with `create_index=true` builds the tree up front, which suits columns
+that are queried straight away. `GeometryVector` is an implementation detail of
+read results: a table supplied to `write` need only provide
 GeoInterface-compatible geometry columns. See [spatial
 indexes](../how-to/spatial-indexes.md) for the supported index workflow.
 

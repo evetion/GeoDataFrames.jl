@@ -7,6 +7,7 @@ import GeoFormatTypes as GFT
 import GeoInterface as GI
 using GeoInterface: GeoInterface
 using Extents: Extents
+using Dates: Dates
 using DataAPI: DataAPI
 using Reexport: Reexport, @reexport
 import GeometryOps as GO
@@ -20,6 +21,7 @@ include("vector.jl")
 include("exports.jl")
 include("drivers.jl")
 include("utils.jl")
+include("arrow.jl")
 include("io.jl")
 include("precompile.jl")
 

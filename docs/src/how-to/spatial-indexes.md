@@ -4,9 +4,12 @@ Use this guide when you need faster repeated spatial filtering or joins.
 
 ## Current GeoDataFrames behavior
 
-`GeoDataFrames.read` may store geometry columns in `GeometryVector`, but
-GeoDataFrames does not currently expose a public API to build and query a
-spatial index directly on that vector.
+`GeoDataFrames.read` may store geometry columns in `GeometryVector`, which
+caches one GeometryOps spatial tree per column. The first
+`GeometryOps.SpatialTreeInterface.spatialtree(column)` call builds that tree,
+later calls reuse it, and mutating the column clears it. Reading with
+`create_index=true` builds it during the read, which suits columns that are
+queried straight away.
 
 For join workflows, [FlexiJoins](https://github.com/JuliaAPlavin/FlexiJoins.jl)
 performs candidate filtering with an STR tree on the right-side table before

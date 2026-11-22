@@ -44,11 +44,17 @@ const lookup_type = Dict{Tuple{DataType,Int},AG.OGRwkbGeometryType}(
 )
 
 """
-    read(fn::AbstractString; create_index=true, kwargs...)
+    read(fn::AbstractString; create_index=false, use_arrow=true, kwargs...)
 
 Read a file into a `DataFrame`. Any kwargs are passed to the driver, by default set to [`ArchGDALDriver`](@ref).
-Geometry columns are wrapped in `GeometryVector` and indexed eagerly by default; pass
-`create_index=false` to skip building the spatial tree.
+Geometry columns are wrapped in `GeometryVector`, which builds its spatial tree on the
+first spatial query and caches it; pass `create_index=true` to build that tree while
+reading.
+
+GDAL reads support GDAL's Arrow C stream, which is an order of magnitude faster than the
+row-by-row reader; pass `use_arrow=false` to force the row-by-row reader. Point layers come
+back as coordinate tuples through the Arrow stream and as `ArchGDAL.IGeometry` through the
+row-by-row reader; every other column matches.
 
 Returns a `DataFrame` whose geometry column(s) hold GeoInterface.jl compatible geometries, with
 the coordinate reference system and geometry column names stored as table metadata.
@@ -68,7 +74,7 @@ julia> names(df2)
  "name"
 ```
 """
-function read(fn; create_index::Bool=true, kwargs...)
+function read(fn; create_index::Bool=false, kwargs...)
     gfn = _gdal_path(fn)
     ext = last(splitext(fn))
     # Native drivers cannot handle GDAL virtual filesystem paths, including
@@ -94,29 +100,40 @@ const NATIVE_FASTER = Set([
     (GeoArrowDriver, :read),
 ])
 
-function read(driver::AbstractDriver, fn::AbstractString; create_index::Bool=true, kwargs...)
+function read(
+    driver::AbstractDriver,
+    fn::AbstractString;
+    create_index::Bool=false,
+    use_arrow::Bool=true,
+    kwargs...,
+)
     if (typeof(driver), :read) in NATIVE_FASTER
         @info "Using GDAL for reading, import $(package(driver)) for a faster native driver."
     else
         @debug "Using GDAL for reading, import $(package(driver)) for a native driver."
     end
-    read(ArchGDALDriver(), fn; create_index, kwargs...)
+    read(ArchGDALDriver(), fn; create_index, use_arrow, kwargs...)
 end
 
 """
-    read(driver::ArchGDALDriver, fn::AbstractString; layer::Union{Integer,AbstractString}, kwargs...)
+    read(driver::ArchGDALDriver, fn::AbstractString; layer::Union{Integer,AbstractString}, use_arrow=true, kwargs...)
 
 Read a file into a DataFrame using the ArchGDAL driver.
 By default you only get the first layer, unless you specify either the index (0 based) or name (string) of the layer.
 Other supported kwargs are passed to the [ArchGDAL read](https://yeesian.com/ArchGDAL.jl/stable/reference/#ArchGDAL.read-Tuple{AbstractString}) method.
 The `options` keyword argument can be used to pass GDAL open options. Returns a `DataFrame`.
+
+Layers that GDAL can stream as Arrow batches are read column at a time; pass
+`use_arrow=false` for the row-by-row reader. See [`read`](@ref) for the one column that
+differs between the two.
 """
 function read(
     driver::ArchGDALDriver,
     fn::AbstractString;
     layer=nothing,
     flags=AG.OF_READONLY | AG.OF_VERBOSE_ERROR,
-    create_index::Bool=true,
+    create_index::Bool=false,
+    use_arrow::Bool=true,
     kwargs...,
 )
     fn = _gdal_path(fn)
@@ -126,12 +143,12 @@ function read(
         if AG.nlayer(ds) > 1 && isnothing(layer)
             @warn "This file has multiple layers, defaulting to first layer."
         end
-        return read(driver, ds, isnothing(layer) ? 0 : layer, create_index)
+        return read(driver, ds, isnothing(layer) ? 0 : layer, create_index, use_arrow)
     end
     return t
 end
 
-function read(::ArchGDALDriver, ds, layer, create_index::Bool)
+function read(::ArchGDALDriver, ds, layer, create_index::Bool, use_arrow::Bool=true)
     df, gnames, sr, metadata = AG.getlayer(ds, layer) do table
         if table.ptr == C_NULL
             throw(
@@ -151,7 +168,10 @@ function read(::ArchGDALDriver, ds, layer, create_index::Bool)
         end
         names, x = AG.schema_names(AG.layerdefn(table))
         sr = AG.getspatialref(table)
-        df = DataFrame(table)
+        df = use_arrow ? _read_arrow(table) : nothing
+        if isnothing(df)
+            df = DataFrame(table)
+        end
         return df, names, sr, metadata
     end
     if "" in names(df)
@@ -346,43 +366,12 @@ function write(
                     setmetadatalayer!(layer, table)
                 end
 
-                for chunk in Iterators.partition(rows, chunksize)
-                    can_use_transaction &&
-                        AG.GDAL.gdaldatasetstarttransaction(ds.ptr, false)
-
-                    for row in chunk
-                        AG.addfeature(layer) do feature
-                            for (i, geom_column) in enumerate(geometrycolumns)
-                                geometry = Tables.getcolumn(row, geom_column)
-                                if ismissing(geometry)
-                                    continue
-                                end
-                                AG.GDAL.ogr_f_setgeomfielddirectly(
-                                    feature.ptr,
-                                    i - 1,
-                                    _convert(AG.Geometry, geometry),
-                                )
-                            end
-                            for (i, (name, _)) in zip(fieldindices, fields)
-                                field = Tables.getcolumn(row, name)
-                                if !ismissing(field)
-                                    AG.setfield!(feature, i, field)
-                                else
-                                    AG.GDAL.ogr_f_setfieldnull(feature.ptr, i)
-                                end
-                            end
-                        end
-                    end
-                    if can_use_transaction
-                        try
-                            AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
-                        catch e
-                            e isa AG.GDAL.GDALError &&
-                                AG.GDAL.gdaldatasetrollbacktransaction(ds.ptr)
-                            rethrow(e)
-                        end
-                    end
-                end
+                # P2: iterate typed columns behind a function barrier instead of
+                # `DataFrameRow` + type-unstable `Tables.getcolumn(row, name)`.
+                _writefeatures!(
+                    layer, ds, table, rows, geometrycolumns, fields, fieldindices,
+                    chunksize, can_use_transaction,
+                )
                 if !can_create_layer
                     @warn "Can't create layers in this format, copying from memory instead."
                     nlayer = AG.copy(
@@ -414,8 +403,23 @@ const lookup_method = Dict{DataType,Function}(
 )
 
 function _convert(::Type{T}, geom) where {T<:AG.Geometry}
-    trait = GI.geomtrait(geom)
-    f = get(lookup_method, typeof(trait), nothing)
+    return _convert(T, geom, GI.geomtrait(geom))
+end
+
+# Fast path for points: the generic path below costs a `Dict{DataType,Function}`
+# lookup (hashing a `DataType`), a `Vector{Float64}` from `GI.coordinates`, a
+# dynamic `Tuple(coords)` and a dynamic call through the boxed `Function`.
+function _convert(::Type{T}, geom, ::GI.PointTrait) where {T<:AG.Geometry}
+    GI.isempty(geom) && return AG.unsafe_createpoint()
+    return if GI.is3d(geom)
+        AG.unsafe_createpoint(GI.x(geom), GI.y(geom), GI.z(geom))
+    else
+        AG.unsafe_createpoint(GI.x(geom), GI.y(geom))
+    end
+end
+
+function _convert(::Type{T}, geom, tr) where {T<:AG.Geometry}
+    f = get(lookup_method, typeof(tr), nothing)
     isnothing(f) && error(
         "Cannot convert an object of $(typeof(geom)) with the $T trait (yet). Please report an issue.",
     )
@@ -424,4 +428,138 @@ end
 
 function _convert(::Type{T}, geom::AG.IGeometry) where {T<:AG.Geometry}
     return AG.unsafe_clone(geom)
+end
+
+# --- P2: column-oriented feature loop ---------------------------------------
+# `Tables.rows(::DataFrame)` yields `DataFrameRow`s whose `Tables.getcolumn` is
+# type-unstable (one heap-allocated box + one dynamic dispatch per cell). Pull
+# the columns out once and pass them down as a `Tuple` of concretely typed
+# vectors, so the innermost loop is fully inferred.
+const _MAX_BARRIER_FIELDS = 8
+
+function _writefeatures!(
+    layer, ds, table, rows, geometrycolumns, fields, fieldindices,
+    chunksize, can_use_transaction,
+)
+    if Tables.columnaccess(table) && length(fields) <= _MAX_BARRIER_FIELDS
+        cols = Tables.columns(table)
+        geomcols = map(c -> Tables.getcolumn(cols, c), Tuple(geometrycolumns))
+        fieldcols = map(nt -> Tables.getcolumn(cols, first(nt)), Tuple(fields))
+        return _writecolumns!(
+            layer, ds, geomcols, fieldcols, Tuple(fieldindices),
+            chunksize, can_use_transaction,
+        )
+    end
+    return _writerows!(
+        layer, ds, rows, geometrycolumns, fields, fieldindices,
+        chunksize, can_use_transaction,
+    )
+end
+
+@inline _setgeoms!(feature, ::Tuple{}, i, gi) = nothing
+@inline function _setgeoms!(feature, geomcols::Tuple, i, gi)
+    geometry = @inbounds geomcols[1][i]
+    if !ismissing(geometry)
+        AG.GDAL.ogr_f_setgeomfielddirectly(
+            feature.ptr, gi - 1, _convert(AG.Geometry, geometry),
+        )
+    end
+    return _setgeoms!(feature, Base.tail(geomcols), i, gi + 1)
+end
+
+@inline _setflds!(feature, ::Tuple{}, ::Tuple{}, i) = nothing
+@inline function _setflds!(feature, fieldcols::Tuple, fieldindices::Tuple, i)
+    field = @inbounds fieldcols[1][i]
+    if !ismissing(field)
+        AG.setfield!(feature, fieldindices[1], field)
+    else
+        AG.GDAL.ogr_f_setfieldnull(feature.ptr, fieldindices[1])
+    end
+    return _setflds!(feature, Base.tail(fieldcols), Base.tail(fieldindices), i)
+end
+
+function _writechunk!(layer, featuredefn, geomcols::Tuple, fieldcols::Tuple,
+                      fieldindices::Tuple, lo::Int, hi::Int)
+    for i in lo:hi
+        feature = AG.unsafe_createfeature(featuredefn)
+        try
+            _setgeoms!(feature, geomcols, i, 1)
+            _setflds!(feature, fieldcols, fieldindices, i)
+            AG.addfeature!(layer, feature)
+        finally
+            AG.destroy(feature)
+        end
+    end
+    return nothing
+end
+
+function _writecolumns!(layer, ds, geomcols::Tuple, fieldcols::Tuple,
+                        fieldindices::Tuple, chunksize, can_use_transaction)
+    n = if !isempty(geomcols)
+        length(geomcols[1])
+    elseif !isempty(fieldcols)
+        length(fieldcols[1])
+    else
+        0
+    end
+    featuredefn = AG.layerdefn(layer)
+    lo = 1
+    while lo <= n
+        hi = min(lo + chunksize - 1, n)
+        can_use_transaction && AG.GDAL.gdaldatasetstarttransaction(ds.ptr, false)
+        _writechunk!(layer, featuredefn, geomcols, fieldcols, fieldindices, lo, hi)
+        if can_use_transaction
+            try
+                AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
+            catch e
+                e isa AG.GDAL.GDALError &&
+                    AG.GDAL.gdaldatasetrollbacktransaction(ds.ptr)
+                rethrow(e)
+            end
+        end
+        lo = hi + 1
+    end
+    return nothing
+end
+
+# Fallback for row-only Tables.jl sources (unchanged semantics).
+function _writerows!(layer, ds, rows, geometrycolumns, fields, fieldindices,
+                     chunksize, can_use_transaction)
+    featuredefn = AG.layerdefn(layer)
+    for chunk in Iterators.partition(rows, chunksize)
+        can_use_transaction && AG.GDAL.gdaldatasetstarttransaction(ds.ptr, false)
+        for row in chunk
+            feature = AG.unsafe_createfeature(featuredefn)
+            try
+                for (i, geom_column) in enumerate(geometrycolumns)
+                    geometry = Tables.getcolumn(row, geom_column)
+                    ismissing(geometry) && continue
+                    AG.GDAL.ogr_f_setgeomfielddirectly(
+                        feature.ptr, i - 1, _convert(AG.Geometry, geometry),
+                    )
+                end
+                for (i, (name, _)) in zip(fieldindices, fields)
+                    field = Tables.getcolumn(row, name)
+                    if !ismissing(field)
+                        AG.setfield!(feature, i, field)
+                    else
+                        AG.GDAL.ogr_f_setfieldnull(feature.ptr, i)
+                    end
+                end
+                AG.addfeature!(layer, feature)
+            finally
+                AG.destroy(feature)
+            end
+        end
+        if can_use_transaction
+            try
+                AG.GDAL.gdaldatasetcommittransaction(ds.ptr)
+            catch e
+                e isa AG.GDAL.GDALError &&
+                    AG.GDAL.gdaldatasetrollbacktransaction(ds.ptr)
+                rethrow(e)
+            end
+        end
+    end
+    return nothing
 end

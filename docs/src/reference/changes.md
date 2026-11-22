@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 - Extent metadata support.
 - Improved show methods for GeoDataFrames and GeometryVectors.
+- `GeometryVector` builds its spatial index on the first spatial query and caches it, so `read` no longer spends time indexing columns that are never queried. Pass `create_index=true` to `read` to build the index while reading.
 
 ## v0.4.4
 

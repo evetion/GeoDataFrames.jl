@@ -12,7 +12,7 @@ Read `fn` using the GeoParquetDriver driver. Any additional keyword arguments ar
 function GeoDataFrames.read(
     ::GeoParquetDriver,
     fname::AbstractString;
-    create_index::Bool=true,
+    create_index::Bool=false,
     kwargs...,
 )
     df = GeoParquet.read(fname; kwargs...)

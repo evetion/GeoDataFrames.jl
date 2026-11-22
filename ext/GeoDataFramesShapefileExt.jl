@@ -6,7 +6,7 @@ using Shapefile
 function GeoDataFrames.read(
     ::GeoDataFrames.ShapefileDriver,
     fname::AbstractString;
-    create_index::Bool=true,
+    create_index::Bool=false,
     kwargs...,
 )
     isempty(kwargs) || @error "Shapefile backend does not support keyword arguments."
