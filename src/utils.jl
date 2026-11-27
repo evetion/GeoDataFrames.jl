@@ -19,9 +19,22 @@ function dictstring(sv::Vector{String})
     return dict
 end
 
+"""
+    isdocumentdomain(domain)
+
+Whether a GDAL metadata domain holds a single document instead of `KEY=VALUE` items:
+domains whose names start with `json:` or `xml:`.
+See https://gdal.org/en/stable/user/raster_data_model.html#metadata
+"""
+isdocumentdomain(domain::AbstractString) =
+    startswith(domain, "json:") || startswith(domain, "xml:")
+
 function setmetadatalayer!(layer, table)
     for (k, v) in DataAPI.metadata(table)
-        if v isa Dict
+        if v isa AbstractString && isdocumentdomain(string(k))
+            @debug "Writing metadata document for domain $k"
+            AG.GDAL.gdalsetmetadata(layer.ptr, [string(v)], string(k))
+        elseif v isa Dict
             for (dk, dv) in pairs(v)
                 @debug "Writing metadata item $dk = $dv for domain $k"
                 AG.GDAL.gdalsetmetadataitem(

@@ -143,10 +143,14 @@ function read(::ArchGDALDriver, ds, layer, create_index::Bool)
         domains = AG.GDAL.gdalgetmetadatadomainlist(table.ptr)
         metadata = Dict{String,Any}()
         for domain in domains
-            if domain == ""
-                merge!(metadata, dictstring(AG.GDAL.gdalgetmetadata(table.ptr, domain)))
+            items = AG.GDAL.gdalgetmetadata(table.ptr, domain)
+            if isdocumentdomain(domain)
+                # A json: or xml: domain holds one document, not KEY=VALUE items
+                isempty(items) || (metadata[domain] = first(items))
+            elseif domain == ""
+                merge!(metadata, dictstring(items))
             else
-                metadata[domain] = dictstring(AG.GDAL.gdalgetmetadata(table.ptr, domain))
+                metadata[domain] = dictstring(items)
             end
         end
         names, x = AG.schema_names(AG.layerdefn(table))
