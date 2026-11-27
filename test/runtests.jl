@@ -1049,6 +1049,44 @@ end
     @test isnothing(get(DataAPI.colmetadata(dfn), :geometry, nothing))
 end
 
+@testitem "JSON and XML metadata domains" setup = [Setup] begin
+    # json: and xml: domains hold one document each, not KEY=VALUE items. The OGC API
+    # Features driver, for one, puts each collection's JSON description in json:metadata.
+    withequals = """{"title": "Districts", "links": [{"href": "https://example.org/items?f=json"}]}"""
+    noequals = """{"title": "No equals sign"}"""
+    xmldoc = """<root a="1"><b>x</b></root>"""
+
+    df = DataFrame(a = 1, geometry = [(1.0, 2.0)])
+    DataAPI.metadata!(df, "json:withequals", withequals)
+    DataAPI.metadata!(df, "json:noequals", noequals)
+    DataAPI.metadata!(df, "xml:doc", xmldoc)
+    GeoDataFrames.write("metadata_documents.gpkg", df)
+
+    # Each document is written whole, as the domain's only item
+    AG.read("metadata_documents.gpkg") do ds
+        layer = AG.getlayer(ds, 0)
+        @test AG.GDAL.gdalgetmetadata(layer.ptr, "json:withequals") == [withequals]
+        @test AG.GDAL.gdalgetmetadata(layer.ptr, "json:noequals") == [noequals]
+        # and not also as a "json:..."/"xml:..." item of the default domain
+        @test !any(s -> startswith(s, "json:") || startswith(s, "xml:"),
+            AG.GDAL.gdalgetmetadata(layer.ptr, ""))
+    end
+
+    # ...and read back whole, without a warning, and not split at the first "="
+    dfn = @test_logs GeoDataFrames.read("metadata_documents.gpkg")
+    meta = DataAPI.metadata(dfn)
+    @test meta["json:withequals"] == withequals
+    @test meta["json:noequals"] == noequals
+    @test occursin("<b>x</b>", meta["xml:doc"])  # GDAL reformats XML documents
+
+    # A round trip keeps them
+    GeoDataFrames.write("metadata_documents2.gpkg", dfn)
+    meta2 = DataAPI.metadata(GeoDataFrames.read("metadata_documents2.gpkg"))
+    @test meta2["json:withequals"] == withequals
+    @test meta2["json:noequals"] == noequals
+    @test meta2["xml:doc"] == meta["xml:doc"]
+end
+
 @testitem "GDAL virtual filesystem paths" setup = [Setup] begin
     # HTTP/HTTPS/FTP URLs get /vsicurl/ prefix
     @test GDF._gdal_path("https://example.com/file.gpkg") == "/vsicurl/https://example.com/file.gpkg"
